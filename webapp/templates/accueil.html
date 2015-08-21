@@ -1,0 +1,27 @@
+{% autoescape None %}
+{% extends "basic.html" %}
+
+
+
+    {% block content %}
+       
+          <h1 class="page-header">Poses in {{ data['library']}}</h1>
+
+          <div class="row placeholders">
+
+          {% for d in data['poses'] %}
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <a href="/edit{{ data['library'] }}/{{ d['id'] }}">
+                <h4>{{d['title']}}</h4>
+
+              <img src="/static/content/{{d['pose']}}.png" class="img-responsive" alt="Missing thumbnail">
+              </a>
+              <a class="btn btn-primary btn-sm">Apply pose</a> 
+            </div>
+
+         {% end %}
+            
+          </div>
+
+
+    {% end %}

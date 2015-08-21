@@ -1,0 +1,40 @@
+{% autoescape None %}
+{% extends "basic.html" %}
+
+{% block app_js %}
+<script src="/static/js/edit.js" type="text/javascript"></script>
+{% end %}
+
+    {% block content %}
+       
+       {% if data['newPose'] == False %}
+          <h1 class="page-header">Edit {{ data['pose']['title'] }}</h1>
+
+          <div class="row placeholders">
+
+          <img src='/static/content/{{ data['pose']['pose'] }}.png' />
+
+          <button class="btn" id="reloadThumbnail" pose="{{ data['pose']['pose'] }}">Refresh thumbnail</button>
+            
+          </div>
+          {{data}}
+          
+          <div class="form-group">
+            <label for="poseTitle">Pose title</label>
+            <input type="text" class="form-control" id="poseTitle" placeholder="Pose title (Short)" value="{{ data['pose']['title'] }}">
+          </div>
+          <div class="form-group">
+            <label for="poseTitle">Library</label>
+            <input type="text" class="form-control" id="poseTitle" placeholder="/libraryName" value="{{ data['pose']['lib'] }}">
+          </div>
+          <div class="form-group">
+            <label for="jsonPose">Pose JSON (FYI)</label>
+            <textarea class="form-control" rows="5" id="jsonPose" >{{ data['pose']['blenderPose'] }}</textarea>
+          </div>
+          <button class="btn" id="reloadPose" pose="{{ data['pose']['pose'] }}">Update pose</button>
+        {% else %}
+          <h1 class="page-header">New pose</h1>
+
+          <button class="btn" id="newPose" pose="{{ data['pose']['pose'] }}">Capture current pose for lib {{ data['pose']['lib'] }}</button>
+        {% end %}
+    {% end %}
