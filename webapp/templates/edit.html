@@ -32,9 +32,15 @@
             <textarea class="form-control" rows="5" id="jsonPose" >{{ data['pose']['blenderPose'] }}</textarea>
           </div>
           <button class="btn" id="reloadPose" pose="{{ data['pose']['pose'] }}">Update pose</button>
+          <button class="btn" id="applyPose" pose="{{ data['pose']['pose'] }}">Apply pose</button>
+
+
+
+
         {% else %}
           <h1 class="page-header">New pose</h1>
 
           <button class="btn" id="newPose" pose="{{ data['pose']['pose'] }}">Capture current pose for lib {{ data['pose']['lib'] }}</button>
+
         {% end %}
     {% end %}

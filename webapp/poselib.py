@@ -107,8 +107,8 @@ class EditHandler(tornado.web.RequestHandler):
         else:
             data['newPose'] = False
             data['pose'] = getPose(os.path.join(libraryPath, "%s.json" % pose))
-        
-        
+
+
 
         self.render('edit.html', data=data)
     def post(self, pose):
@@ -127,14 +127,14 @@ class EditHandler(tornado.web.RequestHandler):
         lib =  "/%s" % pose.split('/')[0] if pose else "/"
         title = self.get_argument("title", None)
         blenderPose = self.get_argument("blenderPose", None)
-        jsonFile = os.path.join(libraryPath, "%s.json" % (pose))
-        print jsonFile
+        jsonFile = os.path.join(libraryPath, ".%s.json" % (pose))
+        print libraryPath, jsonFile
         if os.path.exists(jsonFile):
             # Update
             currentPose = getPose(jsonFile)
             if title:
                 currentPose['title'] = title
-            if jsonPose:
+            if blenderPose:
                 currentPose['blenderPose'] = blenderPose
 
         else:
