@@ -99,11 +99,12 @@ class EditHandler(tornado.web.RequestHandler):
             gotId = False
             while gotId is False:
                 newId += 1
-                if not os.path.exists(os.path.join(libraryPath, "%s/%i.json" % (data['library'], newId) )):
+                path = os.path.join(libraryPath, ".%s/%i.json" % (data['library'], newId) )
+                if not os.path.exists(path):
                     gotId = True
 
             data['pose'] = newPose(data['library'], "%s/%i" % (data['library'], newId))
-
+            savePose(path, data['pose'])
         else:
             data['newPose'] = False
             data['pose'] = getPose(os.path.join(libraryPath, "%s.json" % pose))

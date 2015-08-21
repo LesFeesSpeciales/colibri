@@ -7,7 +7,7 @@
 
     {% block content %}
        
-       {% if data['newPose'] == False %}
+
           <h1 class="page-header">Edit {{ data['pose']['title'] }}</h1>
 
           <div class="row placeholders">
@@ -17,7 +17,7 @@
           <button class="btn" id="reloadThumbnail" pose="{{ data['pose']['pose'] }}">Refresh thumbnail</button>
             
           </div>
-          {{data}}
+          
           
           <div class="form-group">
             <label for="poseTitle">Pose title</label>
@@ -37,10 +37,5 @@
 
 
 
-        {% else %}
-          <h1 class="page-header">New pose</h1>
 
-          <button class="btn" id="newPose" pose="{{ data['pose']['pose'] }}">Capture current pose for lib {{ data['pose']['lib'] }}</button>
-
-        {% end %}
     {% end %}

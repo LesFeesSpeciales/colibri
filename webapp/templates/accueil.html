@@ -5,14 +5,14 @@
 
     {% block content %}
        
-          <h1 class="page-header">Poses in {{ data['library']}}</h1>
+          <h1 class="page-header">Poses in {{ data['library']}} <a href="edit{{ data['library']}}/NEW">new pose</a></h1>
 
           <div class="row placeholders">
 
           {% for d in data['poses'] %}
             <div class="col-xs-6 col-sm-3 placeholder">
               <a href="/edit{{ data['library'] }}/{{ d['id'] }}">
-                <h4>{{d['title']}}</h4>
+                <h4>{{d['title']}} </h4>
 
               <img src="/static/content/{{d['pose']}}.png" class="img-responsive" alt="Missing thumbnail">
               </a>
