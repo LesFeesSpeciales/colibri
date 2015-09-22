@@ -76,139 +76,230 @@ dbVersion = 1 # db version should change only if structure changes
 #        SQLITE FUNCTIONS        #
 ##################################
 
-def db_connect(path):
-    conn = sqlite3.connect(path)
-    c = conn.cursor()
-    return conn, c
 
-def db_initialize(path= dbPath, force=False):
-    if os.path.exists(path) and not force:
-        print("ERROR : CAN'T INITIALIZE DB : Already existing")
-        return
-    if os.path.exists(path):
-        os.remove(path)
+class poseDb:
+    def __init__(self, path=dbPath):
+        self.path = path
+        self.conn = None
+        self.c = None
 
-    conn, c = db_connect(path)
+        self.db_initialize(force=True)
+        self.db_connect()
 
-    c.execute('SELECT SQLITE_VERSION()')
-    version = c.fetchone()
-    print("Initializing sqlite db of version %s" % version)
+    def db_connect(self):
+        '''
+        Connect to the sqlite db
+        '''
+        self.conn = sqlite3.connect(self.path)
+        self.c = self.conn.cursor()
 
-    # Settings tables, metas and values
-    c.execute("CREATE TABLE settings(meta_name TEXT, meta_value TEXT)")
-    c.execute("INSERT INTO Settings VALUES('db_version','%i')" % dbVersion)
-    c.execute("INSERT INTO Settings VALUES('init_time','%i')" % int(time.time()))
+    def db_disconnect(self):
+        '''
+        Close the connection to the sqlite db
+        '''
+        self.conn.close()
 
-    # Pose table
-    c.execute("CREATE TABLE poses(pose_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, json TEXT,\
-               thumbnail_path TEXT, count INT DEFAULT 0, creation_date INT,\
-               update_date INT, source_file TEXT, source_armature TEXT)")
-    # Tags table
-    c.execute("CREATE TABLE tags(tag_id INTEGER PRIMARY KEY AUTOINCREMENT, tag_name TEXT)")
-    # Tags to poses table (many to many)
-    c.execute("CREATE TABLE tags_2_poses(tag_id INT , pose_id INT)")
-    # Library table
-    c.execute("CREATE TABLE libraries(lib_id INTEGER PRIMARY KEY AUTOINCREMENT, lib_name TEXT, lib_parent INT,\
-               lib_type TEXT)")
-    c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES('SHARED', 0, 'poses')")
-    c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES('PRIVATE', 0, 'poses')")
-    c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Victor', 1, 'poses')")
-    c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Flavio', 2, 'poses')")
-    c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Franck', 1, 'poses')")
-    # Poses to lib table (1to1)
-    c.execute("CREATE TABLE pose_2_lib(pose_id INT, lib_id INT)")
+    def db_initialize(self, force=False):
+        '''
+        This function initialize a sqlite database with the right tables in it.
+        '''
+        if os.path.exists(self.path) and not force:
+            print("ERROR : CAN'T INITIALIZE DB : Already existing")
+            return
+        if os.path.exists(self.path):
+            os.remove(self.path)
 
-    conn.commit()
+        self.db_connect()
+        c = self.c
+        conn = self.conn
 
-    createPose(conn, c, "test Title", "hahf", ["mains", "poiraux", "jean michel", "mains"], "titi", "toto")
-    conn.close()
-# TAGS
+        c.execute('SELECT SQLITE_VERSION()')
+        version = c.fetchone()
+        print("Initializing sqlite db of version %s" % version)
+
+        # Settings tables, metas and values
+        c.execute("CREATE TABLE settings(meta_name TEXT, meta_value TEXT)")
+        c.execute("INSERT INTO Settings VALUES('db_version','%i')" % dbVersion)
+        c.execute("INSERT INTO Settings VALUES('init_time','%i')" % int(time.time()))
+
+        # Pose table
+        c.execute("CREATE TABLE poses(pose_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, json TEXT,\
+                   thumbnail_path TEXT, count INT DEFAULT 0, creation_date INT,\
+                   update_date INT, source_file TEXT, source_armature TEXT)")
+        # Tags table
+        c.execute("CREATE TABLE tags(tag_id INTEGER PRIMARY KEY AUTOINCREMENT, tag_name TEXT)")
+        # Tags to poses table (many to many)
+        c.execute("CREATE TABLE tags_2_poses(tag_id INT , pose_id INT)")
+        # Library table
+        c.execute("CREATE TABLE libraries(lib_id INTEGER PRIMARY KEY AUTOINCREMENT, lib_name TEXT, lib_parent INT,\
+                   lib_type TEXT)")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES('SHARED', 0, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES('PRIVATE', 0, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Victor', 1, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Flavio', 2, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Franck', 1, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Hands', 3, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Faces', 3, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Body', 3, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Stand', 8, 'poses')")
+        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Active', 8, 'poses')")
+        # Poses to lib table (1to1)
+        c.execute("CREATE TABLE pose_2_lib(pose_id INT, lib_id INT)")
 
 
-def createTag(conn, c, tag_name):
-    '''create a tag and returns its id. 
-    if the tag exists, return it's id'''
+        self.createPose("test Title", "hahf", ["mains", "poiraux", "jean michel", "mains"], "titi", "toto")
 
-    c.execute("SELECT tag_id FROM tags WHERE tag_name = '%s'" % tag_name)
-    r = c.fetchone()
-    if not r:
-        c.execute("INSERT INTO tags ('tag_name') VALUES('%s')" % tag_name)
-        c.execute("SELECT tag_id FROM tags WHERE  tag_id = (SELECT MAX(tag_id)  FROM tags);")
-        tag_id = c.fetchone()[0]
-    else:
-        tag_id = r[0]
-    conn.commit()
-    return tag_id
-
-
-def addTagToPose(conn, c, tag_name, pose_id):
-    tag_id = createTag(conn, c, tag_name)
-    c.execute("SELECT * from tags_2_poses WHERE tag_id = %i and pose_id = %i" % (tag_id, pose_id))
-    if c.fetchone():
-        # Tag already assigned to pose
-        return
-    else:
-        c.execute("INSERT INTO tags_2_poses VALUES(%i, %i)" % (tag_id, pose_id))
         conn.commit()
 
-def deleteTagToPose(conn, c, tag_name, pose_id):
-    pass
+        
+        conn.close()
+    # TAGS
 
-def deleteTag(conn, c, tag_name):
-    pass
+    def getTagId(self, tag_name):
+        self.c.execute("SELECT tag_id FROM tags WHERE tag_name = '%s'" % tag_name)
+        r = self.c.fetchone()
+        if r:
+            return r[0]
+        else:
+            return None
 
-def getTags():
-    pass
+    def createTag(self, tag_name):
+        '''
+        create a tag and returns its id. 
+        If the tag already exists returns its id
+        '''
 
-# POSES
+        tag_id = self.getTagId(tag_name)
 
-def createPose(conn, c, title, json, tags=[], source_file="", source_armature=""):
-    c.execute("INSERT INTO poses(title, json, creation_date, update_date, source_file, source_armature) VALUES(\
-                '%s', '%s', %i, %i, '%s', '%s')" %
-                (title, base64.b64encode(json), int(time.time()), int(time.time()), source_file, source_armature))
-    
-    c.execute("SELECT * FROM poses WHERE  pose_id = (SELECT MAX(pose_id)  FROM poses);")
-    pose_id = c.fetchone()[0]
+        if not tag_id:
+            self.c.execute("INSERT INTO tags ('tag_name') VALUES('%s')" % tag_name)
+            self.c.execute("SELECT tag_id FROM tags WHERE  tag_id = (SELECT MAX(tag_id)  FROM tags);")
+            tag_id = self.c.fetchone()[0]
+            self.conn.commit()
+        
+        return tag_id
 
 
-    for tag in tags:
-        addTagToPose(conn, c, tag, pose_id)
-    conn.commit()
-    return pose_id
+    def addTagToPose(self, tag_name, pose_id):
+        '''
+        Provided a tag (text) and a pose_id, it links them in the db
+        If the tag does not exists it will be created
+        '''
+        tag_id = self.createTag(tag_name)
+        self.c.execute("SELECT * from tags_2_poses WHERE tag_id = %i and pose_id = %i" % (tag_id, pose_id))
+        if self.c.fetchone():
+            # Tag already assigned to pose
+            return
+        else:
+            self.c.execute("INSERT INTO tags_2_poses VALUES(%i, %i)" % (tag_id, pose_id))
+            self.conn.commit()
 
-def updatePose(conn, c, title=None, json=None, tags=None, source_file=None, source_armature=None):
-    pass
+    def deleteTagToPose(self, tag_name, pose_id):
+        '''
+        delete tag link to a pose if it exists
+        '''
+        tag_id = self.getTagId(tag_name)
+        if tag_id:
+            self.c.execute("DELETE FROM tags_2_poses WHERE tag_id = %i and pose_id =%i" % (tag_id, pose_id))
+        self.conn.commit()
 
-def deletePose(conn, c, pose_id):
-    # Delete tag relations
-    # Delete lib relations
-    # Delete pose
-    pass
+    def deleteTag(self, tag_name):
+        '''
+        delete a tag and all the poses linked to it !
+        '''
+        tag_id = self.getTagId(tag_name)
+        if tag_id:
+            self.c.execute("DELETE FROM tags_2_poses WHERE tag_id = %i" % (tag_id))
+            self.c.execute("DELETE FROM tags WHERE tag_id = %i" % (tag_id))
+            self.conn.commit()
 
-def getPoses(conn, c):
-    pass
+    def getTags(self, orderByCount=False):
+        '''
+        get the list of all the tags and ids
+        return [  [tag_name, tag_id], ... ] order by name (default) or by count
+        '''
+        self.c.execute('SELECT tag_id, tag_name from tags')
+        tags = []
+        for r in c.fetchall():
+            tags.append((r[1], r[0]))
 
-# Libs
+        tags.sort()
+        return tags
 
-def addLib():
-    pass
+    # POSES
 
-def updateLib():
-    pass
+    def createPose(self, title, json, tags=[], source_file="", source_armature=""):
+        '''
+        Providing the basic infos, it create a new pose in the database
+        '''
+        self.c.execute("INSERT INTO poses(title, json, creation_date, update_date, source_file, source_armature) VALUES(\
+                    '%s', '%s', %i, %i, '%s', '%s')" %
+                    (title, base64.b64encode(json), int(time.time()), int(time.time()), source_file, source_armature))
+        
+        self.c.execute("SELECT * FROM poses WHERE  pose_id = (SELECT MAX(pose_id)  FROM poses);")
+        pose_id = self.c.fetchone()[0]
 
-def deleteLib(deleteContent=False, transferTo=None):
-    pass
 
-def getLibs():
-    c.execute("SELECT lib_id, lib_name, lib_parent from librairies ORDER BY lib_parent")
-    _libs = {}
-    librairies = {0:{'lib_name':'/', 'children':{}}}
-    for r in c.fetchall():
-        #_libs[r[0]] = {'lib_name':r[1], 'lib_parent':r[2]}
+        for tag in tags:
+            self.addTagToPose(tag, pose_id)
+        self.conn.commit()
+        return pose_id
 
+    def updatePose(self, pose_id, title=None, json=None, tags=None, source_file=None, source_armature=None):
+        '''
+        provided a pose_id it will update all the other provided fields
+        '''
         pass
-    #librairies = {0:{'lib_name':'/', 'children':{}}}
-    #for l in _libs:
+
+    def deletePose(self, pose_id):
+        '''
+        Delete a pose, the lib relations and tags relations
+        '''
+        # Delete tag relations
+        # Delete lib relations
+        # Delete pose
+        pass
+
+    def getPoses(self):
+        '''
+        get the list of all poses
+        or filter them if ...
+        '''
+        pass
+
+    # Libs
+
+    def addLib(self):
+        '''
+        add a new library folder
+        '''
+        pass
+
+    def updateLib(self):
+        '''
+        change the name or parent library folder
+        '''
+        pass
+
+    def deleteLib(self, deleteContent=False, transferTo=None):
+        '''
+        delete a library folder. Content might be deleted or transfered to another library
+        '''
+        pass
+
+    def getLibs(self):
+        '''
+        get the list of available librairies
+        '''
+        self.c.execute("SELECT lib_id, lib_name, lib_parent from librairies ORDER BY lib_parent")
+        _libs = {}
+        librairies = {0:{'lib_name':'/', 'children':{}}}
+        for r in self.c.fetchall():
+            #_libs[r[0]] = {'lib_name':r[1], 'lib_parent':r[2]}
+
+            pass
+        #librairies = {0:{'lib_name':'/', 'children':{}}}
+        #for l in _libs:
 
 ##################################
 #        POSES FUNCTIONS         #
@@ -376,7 +467,8 @@ if __name__ == '__main__':
     log.info('Debug level %s' % log.level)
 
     # Check if sqlite file exists
-    db_initialize(force=True)
+    pdb = poseDb()
+    #db_initialize(force=True)
     # Else initialize it
 
     app = Application()
