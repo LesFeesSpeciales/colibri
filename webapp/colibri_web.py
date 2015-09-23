@@ -260,12 +260,12 @@ class poseDb:
         # Delete pose
         pass
 
-    def getPoses(self):
+    def getPoses(self, lib_id=None):
         '''
-        get the list of all poses
-        or filter them if ...
+        get the list of all poses in a provided lib
         '''
-        pass
+        self.c.execute("SELECT * FROM poses, pose_2_lib WHERE lib_id = %i" % lib_id)
+        return c.fetchall()
 
     # Libs
 
