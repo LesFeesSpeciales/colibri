@@ -21,7 +21,7 @@ $('.applyPose').click(function(){
     var pose_id = $(this).attr('pose_id');
 
     // get the pose b64
-    $.get( "/pose/" + pose_id +"/getposeb64/", {}, function( data ) {
+    $.get( "/pose/" + pose_id +"/getposeb64/", {'countAsApplied':'yes'}, function( data ) {
         //alert(data);
         connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="APPLY_POSE", data="'+ pose_id + '", jsonPose="' + data + '")');
     });
@@ -33,6 +33,19 @@ $('.applyPose').click(function(){
     //alert(jsonPose);
     //connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="APPLY_POSE", data="'+ pose + '", jsonPose="' + jsonPose + '")');
     //location.reload();
+});
+
+
+$('.selectBones').click(function(){
+    //alert($(this).attr('pose'));
+
+    var pose_id = $(this).attr('pose_id');
+
+    // get the pose b64
+    $.get( "/pose/" + pose_id +"/getposeb64/", {'countAsApplied':'no'}, function( data ) {
+        //alert(data);
+        connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="SELECT_BONES", data="'+ pose_id + '", jsonPose="' + data + '")');
+    });
 });
 
 $('.saveChanges').change(function(){

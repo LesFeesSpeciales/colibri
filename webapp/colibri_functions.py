@@ -189,6 +189,12 @@ class poseDb:
             self.addTagToPose(tag, pose_id)
         self.conn.commit()
         return pose_id
+    def countAsApplied(self, pose_id):
+        pose_id = int(pose_id)
+        cmd = 'UPDATE poses SET count = (SELECT count FROM poses WHERE pose_id = %i)+1 where pose_id = %i' % (pose_id, pose_id)
+        print cmd
+        self.c.execute(cmd)
+        self.conn.commit()
 
     def updatePose(self, pose_id, title=None, json=None, tags=None, source_file=None, source_armature=None, lib_id = None):
         '''

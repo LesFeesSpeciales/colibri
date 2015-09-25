@@ -166,11 +166,16 @@ class MainPosesHandler(tornado.web.RequestHandler):
             self.render("Accueil.html", data=data)
 
 class PosesGetPoseHandler(tornado.web.RequestHandler):
-    def get(self, pose):
+    def get(self, pose_id):
         pdb = colibri_functions.poseDb()
-        pose = pdb.getPoses(pose_id=int(pose))[int(pose)]
+        pose = pdb.getPoses(pose_id=int(pose_id))[int(pose_id)]
 
         self.write(base64.b64encode(pose['json']))
+
+        if self.get_argument("countAsApplied", None) == 'yes':
+            print "count as applied"
+            pdb.countAsApplied(pose_id)
+
 
 class PosesEditHandler(tornado.web.RequestHandler):
     def get(self, pose):

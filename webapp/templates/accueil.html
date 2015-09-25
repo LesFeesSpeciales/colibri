@@ -37,7 +37,7 @@
                 <img src="/static/content/{{data['poses'][p]['pose_id']}}.png" class="img-responsive" alt="Missing thumbnail">
                 </a></br>
                 <a class="btn btn-success btn-sm applyPose"  pose_id="{{ data['poses'][p]['pose_id'] }}"><span class="glyphicon glyphicon-check" aria-hidden="true"></span> Apply</a> 
-                <a class="btn btn-info btn-sm"><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> Select</a> 
+                <a class="btn btn-info btn-sm selectBones" pose_id="{{ data['poses'][p]['pose_id'] }}"><span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span> Select</a> 
                 </br>
                 {% for t in data['poses'][p]['tags'] %}
                   <a href="/tag/{{t[1]}}">{{ t[0] }}</a>

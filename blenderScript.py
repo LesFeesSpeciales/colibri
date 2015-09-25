@@ -143,13 +143,19 @@ def import_transforms(json_data):
 
 def select_bones(json_data):
     bpy.ops.object.mode_set(mode='POSE')
+    bpy.ops.pose.select_all(action='DESELECT')
     json_data = json.loads(json_data.decode())
     print(json_data)
-    bones = bpy.context.selected_pose_bones
+    bones = []
     if bones == [] : 
         for rig in [r for r in bpy.data.objects if r.type == 'ARMATURE']:
             for bone in rig.pose.bones:
                 bones.append(bone)
+    for bone in bones:
+        arma = bone.id_data.name
+        if json_data.get(arma) and json_data.get(arma).get(bone.name):
+            print(bone)
+            bone.bone.select = True
 
 def captGL(outputPath):
     '''Capture opengl in blender viewport and save the render'''
@@ -198,7 +204,8 @@ def poseLib(action=None, data=None, jsonPose=None):
         print(len(encoded_image))
         url = 'http://%s:2048/pose/%s' % (hostname, data)
         response = requests.post(url, params={'field': 'thumbnail', 'source_file':source_file}, files={'file':encoded_image})
-        
+    elif action == "SELECT_BONES":
+        select_bones(base64.b64decode(jsonPose))
     elif action == "START_SERVER":
         start_server("localhost", 8137)
     elif action == "STOP_SERVER":
@@ -208,7 +215,6 @@ def poseLib(action=None, data=None, jsonPose=None):
         url = 'http://%s:2048/pose/%s' % (hostname,data)
         response = requests.post(url, params={'field':'json_fromBlender', 'json':p, 'source_file':source_file})
     elif action == "APPLY_POSE":
-        print(base64.b64decode(jsonPose))
         import_transforms(base64.b64decode(jsonPose))
         
 class LFSPoseLib(bpy.types.Operator):
