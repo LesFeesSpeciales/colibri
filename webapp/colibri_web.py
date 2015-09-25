@@ -165,6 +165,12 @@ class MainPosesHandler(tornado.web.RequestHandler):
                 data['poses'] = pdb.getPoses(lib_id=int(library))
             self.render("Accueil.html", data=data)
 
+class PosesGetPoseHandler(tornado.web.RequestHandler):
+    def get(self, pose):
+        pdb = colibri_functions.poseDb()
+        pose = pdb.getPoses(pose_id=int(pose))[int(pose)]
+
+        self.write(base64.b64encode(pose['json']))
 
 class PosesEditHandler(tornado.web.RequestHandler):
     def get(self, pose):
@@ -182,21 +188,39 @@ class PosesEditHandler(tornado.web.RequestHandler):
 
     def post(self, pose):
         field = self.get_argument("field", None)
-
-        print "pose update :", pose, field, self.get_argument("val", None)
-
-        title = self.get_argument("val", None) if field == 'title' else None
-        json = self.get_argument("val", None) if field == 'json' else None
-        lib_id = self.get_argument("val", None) if field == 'lib_id' else None
+        source_file = self.get_argument("source_file", None)
         pose_id = int(pose)
 
-        # Db connection
         pdb = colibri_functions.poseDb()
-        # update
-        pdb.updatePose(pose_id,
-                       title=title,
-                       json=json,
-                       lib_id=lib_id)
+
+        if field == "thumbnail":
+            print "Hello"
+            imgDecode = base64.b64decode(self.request.files['file'][0]['body'])
+            print "./static/content/%s.png" % pose
+            f = open("./static/content/%s.png" % pose, 'w')
+            f.write(imgDecode)
+            f.close()
+
+            # Update path
+            pdb.updatePose(pose_id,source_file=source_file)
+        elif field == 'json_fromBlender':
+            json = self.get_argument("json")
+            pdb.updatePose(pose_id,json=json, source_file=source_file)
+        else:
+            print "pose update :", pose, field, self.get_argument("val", None)
+
+            title = self.get_argument("val", None) if field == 'title' else None
+            json = self.get_argument("val", None) if field == 'json' else None
+            lib_id = self.get_argument("val", None) if field == 'lib_id' else None
+            
+
+            # Db connection
+            
+            # update
+            pdb.updatePose(pose_id,
+                           title=title,
+                           json=json,
+                           lib_id=lib_id)
 
         self.write('OK')
 
@@ -273,6 +297,7 @@ class Application(tornado.web.Application):
 
     def __init__(self):
         handlers = [
+            (r'/pose/(.*)/getposeb64/', PosesGetPoseHandler),
             (r'/pose/(.*)', PosesEditHandler),
             (r'/lib/(.*)', MainPosesHandler),
 

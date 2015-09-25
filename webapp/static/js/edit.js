@@ -15,13 +15,24 @@ $('#reloadPose').click(function(){
     location.reload();
 });
 
-$('#applyPose').click(function(){
+$('.applyPose').click(function(){
     //alert($(this).attr('pose'));
-    var pose = $(this).attr('pose');
-    var jsonPose =  btoa( $("#jsonPose").val() );  
-    alert(jsonPose);
-    connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="APPLY_POSE", data="'+ pose + '", jsonPose="' + jsonPose + '")');
-    location.reload();
+
+    var pose_id = $(this).attr('pose_id');
+
+    // get the pose b64
+    $.get( "/pose/" + pose_id +"/getposeb64/", {}, function( data ) {
+        //alert(data);
+        connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="APPLY_POSE", data="'+ pose_id + '", jsonPose="' + data + '")');
+    });
+    // send it
+
+
+    //var pose = $(this).attr('pose');
+    //var jsonPose =  btoa( $("#jsonPose").val() );  
+    //alert(jsonPose);
+    //connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="APPLY_POSE", data="'+ pose + '", jsonPose="' + jsonPose + '")');
+    //location.reload();
 });
 
 $('.saveChanges').change(function(){
