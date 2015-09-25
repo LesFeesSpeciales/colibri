@@ -195,6 +195,8 @@ class poseDb:
         provided a pose_id it will update all the other provided fields
         '''
 
+        pose_id = int(pose_id)
+
         updatedKeys = []
         updatedValues = []
         if title:
@@ -202,7 +204,7 @@ class poseDb:
             updatedValues.append(title)
         if json:
             updatedKeys.append("json")
-            updatedValues.append(json)
+            updatedValues.append(base64.b64encode(json))
         if source_file:
             updatedKeys.append("source_file")
             updatedValues.append(source_file)
@@ -223,7 +225,7 @@ class poseDb:
             self.conn.commit()
 
         if lib_id:
-            cmd = 'UPDATE pose_2_lib SET lib_id = %i where pose_id = %i' % (lib_id, pose_id)
+            cmd = 'UPDATE pose_2_lib SET lib_id = %i where pose_id = %i' % (int(lib_id), pose_id)
             print cmd
             self.c.execute(cmd)
             self.conn.commit()
@@ -267,14 +269,19 @@ class poseDb:
 
         for r in self.c.fetchall():
             if not r[0] in poses:
+                self.c.execute('SELECT lib_id from pose_2_lib WHERE pose_id = ?', [r[0]])  # To include in the query before 
+                lib_id = self.c.fetchone()[0]
                 poses[r[0]] = {
                     'pose_id': r[0],
                     'title': r[1],
-                    'json': r[2],
+                    'lib_id': lib_id,
+                    'json': base64.b64decode(r[2]),
                     'thumbnail_path': r[3],
                     'count': r[4],
                     'creation_date': r[5],
+                    'creation_date-h': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(r[5])),
                     'update_date': r[6],
+                    'update_date-h': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(r[6])),
                     'source_file': r[7],
                     'source_armature': r[8],
                     'tags': [],
@@ -286,7 +293,7 @@ class poseDb:
         # orderByTitle.sort()
         # orderByCount.sort()
         # poses["_ORDER"] = {'title':orderByTitle, 'count':orderByCount}
-
+        print poses
         return poses
 
     # Libs

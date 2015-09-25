@@ -14,6 +14,7 @@ import log as rcLog
 import base64
 
 
+import colibri_functions
 """
 TODO
 
@@ -72,234 +73,7 @@ port = 2048
 version = "Alpha 1.0"
 dbVersion = 1 # db version should change only if structure changes
 
-##################################
-#        SQLITE FUNCTIONS        #
-##################################
 
-
-class poseDb:
-    def __init__(self, path=dbPath):
-        self.path = path
-        self.conn = None
-        self.c = None
-
-        self.db_initialize(force=True)
-        self.db_connect()
-
-    def db_connect(self):
-        '''
-        Connect to the sqlite db
-        '''
-        self.conn = sqlite3.connect(self.path)
-        self.c = self.conn.cursor()
-
-    def db_disconnect(self):
-        '''
-        Close the connection to the sqlite db
-        '''
-        self.conn.close()
-
-    def db_initialize(self, force=False):
-        '''
-        This function initialize a sqlite database with the right tables in it.
-        '''
-        if os.path.exists(self.path) and not force:
-            print("ERROR : CAN'T INITIALIZE DB : Already existing")
-            return
-        if os.path.exists(self.path):
-            os.remove(self.path)
-
-        self.db_connect()
-        c = self.c
-        conn = self.conn
-
-        c.execute('SELECT SQLITE_VERSION()')
-        version = c.fetchone()
-        print("Initializing sqlite db of version %s" % version)
-
-        # Settings tables, metas and values
-        c.execute("CREATE TABLE settings(meta_name TEXT, meta_value TEXT)")
-        c.execute("INSERT INTO Settings VALUES('db_version','%i')" % dbVersion)
-        c.execute("INSERT INTO Settings VALUES('init_time','%i')" % int(time.time()))
-
-        # Pose table
-        c.execute("CREATE TABLE poses(pose_id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, json TEXT,\
-                   thumbnail_path TEXT, count INT DEFAULT 0, creation_date INT,\
-                   update_date INT, source_file TEXT, source_armature TEXT)")
-        # Tags table
-        c.execute("CREATE TABLE tags(tag_id INTEGER PRIMARY KEY AUTOINCREMENT, tag_name TEXT)")
-        # Tags to poses table (many to many)
-        c.execute("CREATE TABLE tags_2_poses(tag_id INT , pose_id INT)")
-        # Library table
-        c.execute("CREATE TABLE libraries(lib_id INTEGER PRIMARY KEY AUTOINCREMENT, lib_name TEXT, lib_parent INT,\
-                   lib_type TEXT)")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES('SHARED', 0, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES('PRIVATE', 0, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Victor', 1, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Flavio', 2, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Franck', 1, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Hands', 3, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Faces', 3, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Body', 3, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Stand', 8, 'poses')")
-        c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( 'Active', 8, 'poses')")
-        # Poses to lib table (1to1)
-        c.execute("CREATE TABLE pose_2_lib(pose_id INT, lib_id INT)")
-
-
-        self.createPose("test Title", "hahf", ["mains", "poiraux", "jean michel", "mains"], "titi", "toto")
-
-        conn.commit()
-
-        
-        conn.close()
-    # TAGS
-
-    def getTagId(self, tag_name):
-        self.c.execute("SELECT tag_id FROM tags WHERE tag_name = '%s'" % tag_name)
-        r = self.c.fetchone()
-        if r:
-            return r[0]
-        else:
-            return None
-
-    def createTag(self, tag_name):
-        '''
-        create a tag and returns its id. 
-        If the tag already exists returns its id
-        '''
-
-        tag_id = self.getTagId(tag_name)
-
-        if not tag_id:
-            self.c.execute("INSERT INTO tags ('tag_name') VALUES('%s')" % tag_name)
-            self.c.execute("SELECT tag_id FROM tags WHERE  tag_id = (SELECT MAX(tag_id)  FROM tags);")
-            tag_id = self.c.fetchone()[0]
-            self.conn.commit()
-        
-        return tag_id
-
-
-    def addTagToPose(self, tag_name, pose_id):
-        '''
-        Provided a tag (text) and a pose_id, it links them in the db
-        If the tag does not exists it will be created
-        '''
-        tag_id = self.createTag(tag_name)
-        self.c.execute("SELECT * from tags_2_poses WHERE tag_id = %i and pose_id = %i" % (tag_id, pose_id))
-        if self.c.fetchone():
-            # Tag already assigned to pose
-            return
-        else:
-            self.c.execute("INSERT INTO tags_2_poses VALUES(%i, %i)" % (tag_id, pose_id))
-            self.conn.commit()
-
-    def deleteTagToPose(self, tag_name, pose_id):
-        '''
-        delete tag link to a pose if it exists
-        '''
-        tag_id = self.getTagId(tag_name)
-        if tag_id:
-            self.c.execute("DELETE FROM tags_2_poses WHERE tag_id = %i and pose_id =%i" % (tag_id, pose_id))
-        self.conn.commit()
-
-    def deleteTag(self, tag_name):
-        '''
-        delete a tag and all the poses linked to it !
-        '''
-        tag_id = self.getTagId(tag_name)
-        if tag_id:
-            self.c.execute("DELETE FROM tags_2_poses WHERE tag_id = %i" % (tag_id))
-            self.c.execute("DELETE FROM tags WHERE tag_id = %i" % (tag_id))
-            self.conn.commit()
-
-    def getTags(self, orderByCount=False):
-        '''
-        get the list of all the tags and ids
-        return [  [tag_name, tag_id], ... ] order by name (default) or by count
-        '''
-        self.c.execute('SELECT tag_id, tag_name from tags')
-        tags = []
-        for r in c.fetchall():
-            tags.append((r[1], r[0]))
-
-        tags.sort()
-        return tags
-
-    # POSES
-
-    def createPose(self, title, json, tags=[], source_file="", source_armature=""):
-        '''
-        Providing the basic infos, it create a new pose in the database
-        '''
-        self.c.execute("INSERT INTO poses(title, json, creation_date, update_date, source_file, source_armature) VALUES(\
-                    '%s', '%s', %i, %i, '%s', '%s')" %
-                    (title, base64.b64encode(json), int(time.time()), int(time.time()), source_file, source_armature))
-        
-        self.c.execute("SELECT * FROM poses WHERE  pose_id = (SELECT MAX(pose_id)  FROM poses);")
-        pose_id = self.c.fetchone()[0]
-
-
-        for tag in tags:
-            self.addTagToPose(tag, pose_id)
-        self.conn.commit()
-        return pose_id
-
-    def updatePose(self, pose_id, title=None, json=None, tags=None, source_file=None, source_armature=None):
-        '''
-        provided a pose_id it will update all the other provided fields
-        '''
-        pass
-
-    def deletePose(self, pose_id):
-        '''
-        Delete a pose, the lib relations and tags relations
-        '''
-        # Delete tag relations
-        # Delete lib relations
-        # Delete pose
-        pass
-
-    def getPoses(self, lib_id=None):
-        '''
-        get the list of all poses in a provided lib
-        '''
-        self.c.execute("SELECT * FROM poses, pose_2_lib WHERE lib_id = %i" % lib_id)
-        return c.fetchall()
-
-    # Libs
-
-    def addLib(self):
-        '''
-        add a new library folder
-        '''
-        pass
-
-    def updateLib(self):
-        '''
-        change the name or parent library folder
-        '''
-        pass
-
-    def deleteLib(self, deleteContent=False, transferTo=None):
-        '''
-        delete a library folder. Content might be deleted or transfered to another library
-        '''
-        pass
-
-    def getLibs(self):
-        '''
-        get the list of available librairies
-        '''
-        self.c.execute("SELECT lib_id, lib_name, lib_parent from librairies ORDER BY lib_parent")
-        _libs = {}
-        librairies = {0:{'lib_name':'/', 'children':{}}}
-        for r in self.c.fetchall():
-            #_libs[r[0]] = {'lib_name':r[1], 'lib_parent':r[2]}
-
-            pass
-        #librairies = {0:{'lib_name':'/', 'children':{}}}
-        #for l in _libs:
 
 ##################################
 #        POSES FUNCTIONS         #
@@ -364,20 +138,70 @@ def makeNewPose(metas, obj=None, thumnail=None):
 
 
 class MainPosesHandler(tornado.web.RequestHandler):
+    def get(self, library=0):
+        if not library:  # just /lib ->shot root
+            ibrary = 0
 
-    def get(self, library='/'):
-        # self.write('Welcome to Ricochet<br/><br/> <a href="/Shot/">Liste
-        #    des shots</a> / <a href="/Asset/">Liste des Assets</a> /
-        # <a href="/create/">Creer un element</a>')
-        data = {}
-        data['libs'] = getLibs()
-        data['library'] = "/%s" % library if library else "/"
-        data['poses'] = getLibrary(library)
-        print data
-        self.render('Accueil.html', data=data)
-        # self.write("HelloWorld")
+        pdb = colibri_functions.poseDb()
+
+        if library.endswith("NEWPOSE"):
+            # A new pose is created then redirect to its edit
+            lib_id = int(library.split('/')[0])
+            pose_id = pdb.createPose(title="unnamed pose",
+                                     json="",
+                                     tags=[],
+                                     source_file="",
+                                     source_armature="",
+                                     lib_id=lib_id)
+            self.redirect('/pose/%i' % pose_id)
+        else:
+            # list the poses of that library
+            data = {'libs': pdb.getLibs(),
+                    'library': int(library),
+                    'tags': pdb.getTags(),
+                    'poses': None,
+                    }
+            if library and library.isdigit():
+                data['poses'] = pdb.getPoses(lib_id=int(library))
+            self.render("Accueil.html", data=data)
+
 
 class PosesEditHandler(tornado.web.RequestHandler):
+    def get(self, pose):
+        self.write("HelloWorld")
+
+        pdb = colibri_functions.poseDb()
+        data = {'libs': pdb.getLibs(),
+                'library':0,
+                'tags': pdb.getTags(),
+                }
+        if pose and pose.isdigit():
+            data['pose'] = pdb.getPoses(pose_id=int(pose))[int(pose)]
+            data['library'] = data['pose']['lib_id']
+        self.render("Edit.html", data=data)
+
+    def post(self, pose):
+        field = self.get_argument("field", None)
+
+        print "pose update :", pose, field, self.get_argument("val", None)
+
+        title = self.get_argument("val", None) if field == 'title' else None
+        json = self.get_argument("val", None) if field == 'json' else None
+        lib_id = self.get_argument("val", None) if field == 'lib_id' else None
+        pose_id = int(pose)
+
+        # Db connection
+        pdb = colibri_functions.poseDb()
+        # update
+        pdb.updatePose(pose_id,
+                       title=title,
+                       json=json,
+                       lib_id=lib_id)
+
+        self.write('OK')
+
+
+class PosesEditHandlerOld(tornado.web.RequestHandler):
     def get(self, pose):
 
         data = {}
@@ -449,8 +273,8 @@ class Application(tornado.web.Application):
 
     def __init__(self):
         handlers = [
-            (r'/poses/edit/(.*)', PosesEditHandler),
-            (r'/poses/(.*)', MainPosesHandler),
+            (r'/pose/(.*)', PosesEditHandler),
+            (r'/lib/(.*)', MainPosesHandler),
 
         ]
         settings = dict(
@@ -467,7 +291,7 @@ if __name__ == '__main__':
     log.info('Debug level %s' % log.level)
 
     # Check if sqlite file exists
-    pdb = poseDb()
+    
     #db_initialize(force=True)
     # Else initialize it
 
