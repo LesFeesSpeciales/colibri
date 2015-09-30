@@ -309,7 +309,7 @@ class poseDb:
         add a new library folder
         '''
         self.c.execute("INSERT INTO libraries(lib_name, lib_parent, lib_type) VALUES( ?, ?, ?)", (lib_name, lib_parent, lib_type))
-        
+        self.conn.commit()
         pass
 
     def updateLib(self):

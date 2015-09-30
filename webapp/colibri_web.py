@@ -60,9 +60,9 @@ shared lib and private libs
 """
 
 
-libraryPath = os.path.join(  # TO DELETE
-    os.path.dirname(os.path.realpath(__file__)),
-    'static/content')
+# libraryPath = os.path.join(  # TO DELETE
+#     os.path.dirname(os.path.realpath(__file__)),
+#     'static/content')
 
 dbPath = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
@@ -80,57 +80,57 @@ dbVersion = 1 # db version should change only if structure changes
 ##################################
 
 
-def getPose(p):
-    with open(p, 'r+') as file:
-        data = json.load(file)
-        data['id'] = os.path.basename(p).split('.')[0]
+# def getPose(p):
+#     with open(p, 'r+') as file:
+#         data = json.load(file)
+#         data['id'] = os.path.basename(p).split('.')[0]
 
-    file.close()
-    return data
-
-
-def savePose(path, data):
-    print path
-    print data
-    f = open(path, "w")
-    f.write(json.dumps(data))
-    f.close()
-    return True
+#     file.close()
+#     return data
 
 
-def getLibrary(path='/'):
-    libPath = os.path.join(libraryPath, path)
-    poses = glob.glob(libPath + "/*.json")
-    results = []
-    for p in poses:
-        results.append(getPose(p))
-    return results
+# def savePose(path, data):
+#     print path
+#     print data
+#     f = open(path, "w")
+#     f.write(json.dumps(data))
+#     f.close()
+#     return True
 
 
-def newPose(lib, pose, title="pose title", animated=False, blenderPose="", tags=[]):
-    # {"lib": "/victor", "tags": [], "pose": "/victor/2", "title": "Fist 2", "animated": false, "blenderPose": ""}
-    return {
-        'lib': lib,
-        'pose': pose,
-        'title': title,
-        'animated': animated,
-        'blenderPose': blenderPose,
-        'tags': tags,
-    }
+# def getLibrary(path='/'):
+#     libPath = os.path.join(libraryPath, path)
+#     poses = glob.glob(libPath + "/*.json")
+#     results = []
+#     for p in poses:
+#         results.append(getPose(p))
+#     return results
 
 
-def getLibs():
+# def newPose(lib, pose, title="pose title", animated=False, blenderPose="", tags=[]):
+#     # {"lib": "/victor", "tags": [], "pose": "/victor/2", "title": "Fist 2", "animated": false, "blenderPose": ""}
+#     return {
+#         'lib': lib,
+#         'pose': pose,
+#         'title': title,
+#         'animated': animated,
+#         'blenderPose': blenderPose,
+#         'tags': tags,
+#     }
 
-    libContent = os.listdir(libraryPath)
-    libs = ['/']
-    for d in libContent:
-        if os.path.isdir(os.path.join(libraryPath, d)):
-            libs.append('/%s'% d)
-    return libs
+
+# def getLibs():
+
+#     libContent = os.listdir(libraryPath)
+#     libs = ['/']
+#     for d in libContent:
+#         if os.path.isdir(os.path.join(libraryPath, d)):
+#             libs.append('/%s'% d)
+#     return libs
 
 
-def makeNewPose(metas, obj=None, thumnail=None):
-    pass
+# def makeNewPose(metas, obj=None, thumnail=None):
+#     pass
 
 ##################################
 #        POSES HANDLERS          #
@@ -138,9 +138,9 @@ def makeNewPose(metas, obj=None, thumnail=None):
 
 
 class MainPosesHandler(tornado.web.RequestHandler):
-    def get(self, library=0):
+    def get(self, library="0"):
         if not library:  # just /lib ->shot root
-            ibrary = 0
+            library = "0"
 
         pdb = colibri_functions.poseDb()
 
@@ -230,64 +230,64 @@ class PosesEditHandler(tornado.web.RequestHandler):
         self.write('OK')
 
 
-class PosesEditHandlerOld(tornado.web.RequestHandler):
-    def get(self, pose):
+# class PosesEditHandlerOld(tornado.web.RequestHandler):
+#     def get(self, pose):
 
-        data = {}
-        data['libs'] = getLibs()
-        data['library'] = "/%s" % pose.split('/')[0] if pose else "/"
+#         data = {}
+#         data['libs'] = getLibs()
+#         data['library'] = "/%s" % pose.split('/')[0] if pose else "/"
 
-        if pose.endswith("NEW"):
-            data['newPose'] = True
-            newId = -1
-            gotId = False
-            while gotId is False:
-                newId += 1
-                path = os.path.join(libraryPath, ".%s/%i.json" % (data['library'], newId) )
-                if not os.path.exists(path):
-                    gotId = True
+#         if pose.endswith("NEW"):
+#             data['newPose'] = True
+#             newId = -1
+#             gotId = False
+#             while gotId is False:
+#                 newId += 1
+#                 path = os.path.join(libraryPath, ".%s/%i.json" % (data['library'], newId) )
+#                 if not os.path.exists(path):
+#                     gotId = True
 
-            data['pose'] = newPose(data['library'], "%s/%i" % (data['library'], newId))
-            savePose(path, data['pose'])
-        else:
-            data['newPose'] = False
-            data['pose'] = getPose(os.path.join(libraryPath, "%s.json" % pose))
+#             data['pose'] = newPose(data['library'], "%s/%i" % (data['library'], newId))
+#             savePose(path, data['pose'])
+#         else:
+#             data['newPose'] = False
+#             data['pose'] = getPose(os.path.join(libraryPath, "%s.json" % pose))
 
-        self.render('edit.html', data=data)
+#         self.render('edit.html', data=data)
 
-    def post(self, pose):
-        # thumbnail provided
-        try:
-            imgDecode = base64.b64decode(self.request.files['file'][0]['body'])
-            f = open("./static/content/%s.png" % pose, 'w')
-            f.write(imgDecode)
-            f.close()
-            self.write("OK")
-        except:
-            pass
+#     def post(self, pose):
+#         # thumbnail provided
+#         try:
+#             imgDecode = base64.b64decode(self.request.files['file'][0]['body'])
+#             f = open("./static/content/%s.png" % pose, 'w')
+#             f.write(imgDecode)
+#             f.close()
+#             self.write("OK")
+#         except:
+#             pass
 
-        # get new Json ?
-        print 'pose', pose
-        lib =  "/%s" % pose.split('/')[0] if pose else "/"
-        title = self.get_argument("title", None)
-        blenderPose = self.get_argument("blenderPose", None)
-        jsonFile = os.path.join(libraryPath, ".%s.json" % (pose))
-        print libraryPath, jsonFile
-        if os.path.exists(jsonFile):
-            # Update
-            currentPose = getPose(jsonFile)
-            if title:
-                currentPose['title'] = title
-            if blenderPose:
-                currentPose['blenderPose'] = blenderPose
+#         # get new Json ?
+#         print 'pose', pose
+#         lib =  "/%s" % pose.split('/')[0] if pose else "/"
+#         title = self.get_argument("title", None)
+#         blenderPose = self.get_argument("blenderPose", None)
+#         jsonFile = os.path.join(libraryPath, ".%s.json" % (pose))
+#         print libraryPath, jsonFile
+#         if os.path.exists(jsonFile):
+#             # Update
+#             currentPose = getPose(jsonFile)
+#             if title:
+#                 currentPose['title'] = title
+#             if blenderPose:
+#                 currentPose['blenderPose'] = blenderPose
 
-        else:
-            currentPose = newPose(lib=lib, pose=pose, title=title, blenderPose=blenderPose)
+#         else:
+#             currentPose = newPose(lib=lib, pose=pose, title=title, blenderPose=blenderPose)
 
-        # Save currentPose
-        # TODO
-        savePose(jsonFile, currentPose)
-        self.write('OK')
+#         # Save currentPose
+#         # TODO
+#         savePose(jsonFile, currentPose)
+#         self.write('OK')
 
 
 ##################################
