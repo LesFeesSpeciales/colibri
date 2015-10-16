@@ -21,45 +21,75 @@ import threading
 import bpy
 from bpy.app.handlers import persistent
 
+hostname = "localhost"  # server target to send back data # 
+white_list = ['127.0.0.1']  # commands are allowed to run from that list
+OPEN_SOCKET = True
+current_socket = None
+port = 8137
+port_range = 10  # number of tried ports (incrementing from 'port' variable) before failing
 
-hostname = "localhost"
+# Change if you server is centralized and not on the same host
 wserver = None
+wserver_thread = None
 message_queue = queue.Queue()
 sockets = []
 
 
+# If false, you will not get any message from distant connections (still printed)
+# If True the message will still be put on the queue list, 
+# but still checked before exec
+# If message is coming from anything else than the white_list
+# Blender will open a pop_up to ask if you want to allow that source to exec code
+
 class WebSocketApp(_WebSocket):
     def opened(self):
-        sockets.append(self)
+        if self.peer_address[0] not in white_list and OPEN_SOCKET == False:
+            print("Incoming connection from %s refused" % self.peer_address[0])
+            return
+        else:
+            sockets.append(self)
         
     def closed(self, code, reason=None):
         sockets.remove(self)
         
     def received_message(self, message):
-        # exec(str(message))
-        message_queue.put(message.data.decode(message.encoding))
+        print(self.peer_address)
+        print(message)
+        if self not in sockets:
+            print("Incoming message from %s refused : %s" % (self.peer_address[0], message))
+        else:
+            message_queue.put((message.data.decode(message.encoding), self)) # (the_message, socket)
 
 
 def start_server(host, port):
-    global wserver
+    global wserver, wserver_thread
     if wserver:
+        print("Server already running ?")
         return False
     
-    wserver = make_server(host, port,
-        server_class=WSGIServer,
-        handler_class=WebSocketWSGIRequestHandler,
-        app=WebSocketWSGIApplication(handler_cls=WebSocketApp)
-    )
-    wserver.initialize_websockets_manager()
+    
+    source_port = port
+    while not wserver or source_port + port_range <= port:
+        print("Starting server on port %i" % port)
+        try:
+            
+            wserver = make_server(host, port,
+                server_class=WSGIServer,
+                handler_class=WebSocketWSGIRequestHandler,
+                app=WebSocketWSGIApplication(handler_cls=WebSocketApp)
+            )
+            wserver.initialize_websockets_manager()
+        except:
+            print("Unable to start the server on port %i"% port)
+            port += 1
+            if source_port + port_range <= port:
+                print("Tried all ports without finding one available")
+                return
     
     wserver_thread = threading.Thread(target=wserver.serve_forever)
     wserver_thread.daemon = True
-    wserver_thread.start()
-
-    bpy.app.handlers.scene_update_post.append(scene_update)
-        
+    wserver_thread.start()    
     return True
-
 
 def stop_server():
     global wserver
@@ -67,12 +97,13 @@ def stop_server():
         return False
         
     wserver.shutdown()
+    wserver_thread.stop()
     for socket in sockets:
         socket.close()
         
-    wserver = None
+
     
-    bpy.app.handlers.scene_update_post.remove(scene_update)
+    #bpy.app.handlers.scene_update_post.remove(scene_update)
     
     return True
 
@@ -80,22 +111,23 @@ def stop_server():
 @persistent 
 def scene_update(context):
     while not message_queue.empty():
-        data = message_queue.get()
+        global current_socket
+        data, current_socket = message_queue.get()
         print(data)
-        exec (data)
-    
-    
-# def scene_update(context):
-    # if bpy.data.objects.is_updated:
-        # print("One or more objects were updated!")
-        # for ob in bpy.data.objects:
-            # if ob.is_updated:
-                # print("=>", ob.name)
-
-### start_server("localhost", 8137)
+        if socket.peer_address[0] not in white_list:
+            # You should ask the user first
+            # Save it for later, open popup and prompt for allowing the peer_address
+            pass
+        else:
+            exec(data)
 
 
-### 
+# ##
+# ##     NOW LET'S TALK POSE LIBRARY FUNCTIONS *
+# ##
+
+#  * this should be in another file
+
 def export_transforms():
     bpy.ops.object.mode_set(mode='POSE')
     boneTransform_dict = {}
@@ -140,6 +172,7 @@ def import_transforms(json_data):
 #            bone.matrix_world = matrix_final
             bone.matrix_basis = matrix_final
 ###
+
 
 def select_bones(json_data):
     bpy.ops.object.mode_set(mode='POSE')
@@ -207,7 +240,7 @@ def poseLib(action=None, data=None, jsonPose=None):
     elif action == "SELECT_BONES":
         select_bones(base64.b64decode(jsonPose))
     elif action == "START_SERVER":
-        start_server("localhost", 8137)
+        start_server("localhost", port)
     elif action == "STOP_SERVER":
         stop_server()
     elif action == "EXPORT_POSE":
@@ -216,6 +249,9 @@ def poseLib(action=None, data=None, jsonPose=None):
         response = requests.post(url, params={'field':'json_fromBlender', 'json':p, 'source_file':source_file})
     elif action == "APPLY_POSE":
         import_transforms(base64.b64decode(jsonPose))
+    elif action == "BLENDER_PING":
+        if current_socket:
+            current_socket.send("source_file:%s" % (source_file))
         
 class LFSPoseLib(bpy.types.Operator):
     """Tooltip"""

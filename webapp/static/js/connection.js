@@ -7,6 +7,7 @@ connection.binaryType = "arraybuffer";
 connection.onopen = function () {
     // When the socket opens, log it and send two messages"
     console.log("socket opened");
+    
     //for (var i=0; i<50; i++)
     //{
     
@@ -40,6 +41,7 @@ connection.onmessage = function (e) {
     } else {
         // Print out any other message from the server
         console.log(e.data);
+        alert(e.data);
     }
 };
 
