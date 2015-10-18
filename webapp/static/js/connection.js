@@ -1,12 +1,24 @@
 var port = 8137
 var connection = new WebSocket('ws://localhost:' + port);
+
+
+connectionTimeOut = setTimeout(function (){
+    console.log("socket timeout");
+    $('#BlenderConnectionAlert').html('<div class="alert alert-danger" role="alert">Connection timeout : Impossible to connect to Blender on port '+port+'. Try reloading</div>')
+
+ }, 2000);
+
+
 connection.binaryType = "arraybuffer";
+
+
 
 
 
 connection.onopen = function () {
     // When the socket opens, log it and send two messages"
     console.log("socket opened");
+    clearTimeout(connectionTimeOut);
     
     //for (var i=0; i<50; i++)
     //{
@@ -15,12 +27,20 @@ connection.onopen = function () {
     //}
 //    connection.send('bytes');
 };
+
+connection.onclose = function (close) {
+    console.log('WebSocket Closed ' + close);
+    $('#BlenderConnectionAlert').html('<div class="alert alert-danger" role="alert">Connection closed : Impossible to connect to Blender on port '+port+'. Try reloading</div>')
+    clearTimeout(connectionTimeOut);
+};
+
  
 connection.onerror = function (error) {
     console.log('WebSocket Error ' + error);
-    $('#BlenderConnectionAlert').html('<div class="alert alert-danger" role="alert">Impossible to connect to Blender on port '+port+'. Try reloading</div>')
-
+    $('#BlenderConnectionAlert').html('<div class="alert alert-danger" role="alert">Connection error : Impossible to connect to Blender on port '+port+'. Try reloading</div>')
+    clearTimeout(connectionTimeOut);
 };
+
 
 connection.onmessage = function (e) {
     console.log('Message from server');
