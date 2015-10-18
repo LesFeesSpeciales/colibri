@@ -1,11 +1,13 @@
 import bpy
 from bpy.app.handlers import persistent
+from bpy.ops import op_as_string
 import json
 import uuid
 
 import queue
 import threading
 
+# Specify here you lib path for ws4py if not properly done
 import sys
 sys.path.append('/u/lib/')
 
@@ -14,14 +16,13 @@ from ws4py.websocket import WebSocket as _WebSocket
 from ws4py.server.wsgirefserver import WSGIServer, WebSocketWSGIRequestHandler
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
-# hostname = "localhost"  # server target to send back data #
 
 # commands are allowed to run from that list
-# Default is only localhost
+# Default is localhost only
 white_list = ['127.0.0.1']
 
 # If False, any connection out of white_list refused.
-# If True : prompted to accept
+# If True : prompted to accept (not yet)
 OPEN_SOCKET = False
 
 port = 8137      # Server default port
@@ -134,7 +135,6 @@ def scene_update(context):
 def operator_exists(idname):
     '''simple function that returns if an operator exists'''
 
-    from bpy.ops import op_as_string
     try:
         op_as_string(idname)
         return True
@@ -158,7 +158,7 @@ class LFSBlenderPing(bpy.types.Operator):
 
 
 class LFSMessageCallBack(bpy.types.Operator):
-    """Used to send messages back to the open sockets"""
+    """Used to send messages back to the used socket"""
 
     bl_idname = "lfs.message_callback"
     bl_label = "LFS : Message Call Back"
@@ -167,11 +167,9 @@ class LFSMessageCallBack(bpy.types.Operator):
     message = bpy.props.StringProperty()
 
     def execute(self, context):
-        print("Message Call Back")
-        print(self.callBack_idx)
-        print(self.message)
+        print("Message Call Back to %s : %s" % (self.callBack_idx, self.message))
         callBacks[self.callBack_idx](self.message)
-        del callBacks[self.callBack_idx]
+        del callBacks[self.callBack_idx]  # Callback can only be used once
         return {'FINISHED'}
 
 
@@ -197,19 +195,20 @@ class LFSMessageDispatcher(bpy.types.Operator):
             # msg SHOULD be a valid json string
             msg = json.loads(self.message)
         except:
-            print("ERROR, message is no json")
+            self.report({'ERROR'}, "message is no valid json")
             bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR : message no json")
             return {'CANCELLED'}
 
         if 'operator' not in msg:
             # msg lib should have an operator key
-            print("ERROR, no operator specified in json ")
+            self.report({'ERROR'}, "Json not well formated : no operator specified in json ")
             bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR : no operator specified in json ")
             return {'CANCELLED'}
+
         if operator_exists(msg['operator']) is False:
             # the operator to call need to be register before
             # You cant run function not registered
-            print("ERROR, Operator %s not defined" % msg['operator'])
+            self.report({'ERROR'}, "Operator %s not defined" % msg['operator'])
             bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR, Operator %s not defined" % msg['operator'])
             return {'CANCELLED'}
 
@@ -221,6 +220,7 @@ class LFSMessageDispatcher(bpy.types.Operator):
         msg['callBack_idx'] = self.callBack_idx
 
         # calling the function, providing all the json message
+        # TOFIX : this won't work if operator as no 'operator' and 'callBack_idx' param
         f(**msg)
 
         #  bpy.ops.lfs.message_callback(idx=self.callBack_idx, message="back!")
@@ -229,6 +229,7 @@ class LFSMessageDispatcher(bpy.types.Operator):
 
 class LFSStartServer(bpy.types.Operator):
     """Operator to start a server"""
+
     bl_idname = "lfs.start_server"
     bl_label = "LFS : Start Server"
 
@@ -242,6 +243,7 @@ class LFSStartServer(bpy.types.Operator):
 
 class LFSStopServer(bpy.types.Operator):
     """Operator to stop the server"""
+
     bl_idname = "lfs.stop_server"
     bl_label = "LFS : Stop Server"
 

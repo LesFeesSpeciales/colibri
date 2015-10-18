@@ -1,5 +1,9 @@
 import bpy
-
+import tempfile
+import base64
+import requests
+import json
+from mathutils import Matrix
 #  * this should be in another file
 
 def export_transforms():
@@ -113,19 +117,13 @@ def poseLib(action=None, data=None, jsonPose=None):
         response = requests.post(url, params={'field': 'thumbnail', 'source_file':source_file}, files={'file':encoded_image})
     elif action == "SELECT_BONES":
         select_bones(base64.b64decode(jsonPose))
-    elif action == "START_SERVER":
-        start_server("localhost", port)
-    elif action == "STOP_SERVER":
-        stop_server()
+    
     elif action == "EXPORT_POSE":
         p = json.dumps(export_transforms())
         url = 'http://%s:2048/pose/%s' % (hostname,data)
         response = requests.post(url, params={'field':'json_fromBlender', 'json':p, 'source_file':source_file})
     elif action == "APPLY_POSE":
         import_transforms(base64.b64decode(jsonPose))
-    elif action == "BLENDER_PING":
-        if current_socket:
-            current_socket.send("source_file:%s" % (source_file))
 
 
 def register():
