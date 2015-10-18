@@ -23,8 +23,12 @@ $('.applyPose').click(function(){
     // get the pose b64
     $.get( "/pose/" + pose_id +"/getposeb64/", {'countAsApplied':'yes'}, function( data ) {
         //alert(data);
-        connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="APPLY_POSE", data="'+ pose_id + '", jsonPose="' + data + '")');
+        // connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="APPLY_POSE", data="'+ pose_id + '", jsonPose="' + data + '")');
     });
+    var myO = {"operator":"lfs.blender_ping"};
+    var myOStr = JSON.stringify(myO);
+    alert(myOStr)
+    connection.send(myOStr);
     // send it
 
 

@@ -1,17 +1,16 @@
 import bpy
-import tempfile
-import base64
-import requests
+from bpy.app.handlers import persistent
+
+# import tempfile
+# import base64
+# import requests
 import json
-from mathutils import Matrix
+# from mathutils import Matrix
 
 import uuid
 
 import sys
 sys.path.append('/u/lib/')
-
-### SERVER
-
 
 from wsgiref.simple_server import make_server
 from ws4py.websocket import WebSocket as _WebSocket
@@ -20,10 +19,8 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 import queue
 import threading
-import bpy
-from bpy.app.handlers import persistent
 
-hostname = "localhost"  # server target to send back data # 
+hostname = "localhost"  # server target to send back data #
 white_list = ['127.0.0.1']  # commands are allowed to run from that list
 OPEN_SOCKET = False  # If False, any connection out of white_list refused. If True : prompted to accept
 port = 8137
@@ -38,14 +35,10 @@ callBacks = {}
 
 
 def registerCallBack(callback):
-    k = uuid.uuid4()
+    '''register a call back function with an assigned uuid'''
+    k = str(uuid.uuid4())
     callBacks[k] = callback
     return k
-
-
-def callback(idx, msgToSend):
-    callBacks[idx](msgToSend)
-    del callBacks[idx]
 
 
 class WebSocketApp(_WebSocket):
@@ -59,13 +52,15 @@ class WebSocketApp(_WebSocket):
         sockets.append(self)
 
     def closed(self, code, reason=None):
+        print('Connection from %s closed %i : %s'
+              % (self.peer_adress, code, reason))
         sockets.remove(self)
 
     def received_message(self, message):
         print(self.peer_address)
-        print(message)
+        print(message.data.decode(message.encoding))
 
-        message_queue.put((message.data.decode(message.encoding), self)) # (the_message, socket)
+        message_queue.put((message.data.decode(message.encoding), self))  # (the_message, socket)
 
 
 def start_server(host, port):
@@ -73,13 +68,11 @@ def start_server(host, port):
     if wserver:
         print("Server already running ?")
         return False
-    
-    
+
     source_port = port
     while not wserver or source_port + port_range <= port:
         print("Starting server on port %i" % port)
         try:
-            
             wserver = make_server(host, port,
                                   server_class=WSGIServer,
                                   handler_class=WebSocketWSGIRequestHandler,
@@ -87,42 +80,49 @@ def start_server(host, port):
                                   )
             wserver.initialize_websockets_manager()
         except:
-            print("Unable to start the server on port %i"% port)
+            print("Unable to start the server on port %i" % port)
             port += 1
             if source_port + port_range <= port:
                 print("Tried all ports without finding one available")
                 return
-    
+
     wserver_thread = threading.Thread(target=wserver.serve_forever)
     wserver_thread.daemon = True
-    wserver_thread.start()    
+    wserver_thread.start()
+
+    bpy.app.handlers.scene_update_post.append(scene_update)
+
     return True
+
 
 def stop_server():
     global wserver
     if not wserver:
         return False
-    
+
     for socket in sockets:
         socket.close(code=1001)
     wserver.shutdown()
-    
-    
-        
 
-    
-    #bpy.app.handlers.scene_update_post.remove(scene_update)
-    
+    bpy.app.handlers.scene_update_post.remove(scene_update)
+
     return True
 
-    
-@persistent 
+
+@persistent
 def scene_update(context):
+    #  print("Checking")
     while not message_queue.empty():
         message, socket = message_queue.get()
-        
-        #exec(message)
-        state = LFSMessageDispatcher(message=message,socket=socket)
+        print(message)
+        # message should be a json format
+        # {'operator':'the operator name to call',
+        #  'callback_needed':True/False,
+        #  anyOtherKey
+        #  }
+        # exec(message)
+        callBack_idx = registerCallBack(lambda msgToSend: socket.send(msgToSend))
+        bpy.ops.lfs.message_dispatcher(message=message, callBack_idx=callBack_idx)
 
 
 def operator_exists(idname):
@@ -136,33 +136,75 @@ def operator_exists(idname):
 
 class LFSBlenderPing(bpy.types.Operator):
     """ToDo"""
-    bl_idname = "lfs.BlenderPing"
+    bl_idname = "lfs.blender_ping"
     bl_label = "LFS : Bleder Ping"
 
-    message = bpy.props.StringProperty()
-    websocket = bpy.props.StringProperty()
+    callBack_idx = bpy.props.StringProperty()
+    operator = bpy.props.StringProperty()
 
     def execute(self, context):
-        pass
+        msgBack = {'port': port, 'operator': self.operator, 'file':bpy.data.filepath}
+        bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message=json.dumps(msgBack))
+        return {'FINISHED'}
 
+
+class LFSMessageCallBack(bpy.types.Operator):
+    """Class """
+    bl_idname = "lfs.message_callback"
+    bl_label = "LFS : Message Call Back"
+
+    callBack_idx = bpy.props.StringProperty()
+    message = bpy.props.StringProperty()
+
+    def execute(self, context):
+        print("Message Call Back")
+        print(self.callBack_idx)
+        print(self.message)
+        callBacks[self.callBack_idx](self.message)
+        del callBacks[self.callBack_idx]
+        return {'FINISHED'}
 
 
 class LFSMessageDispatcher(bpy.types.Operator):
     """Tooltip"""
     bl_idname = "lfs.message_dispatcher"
     bl_label = "LFS : Message Dispatcher"
-    
+
     message = bpy.props.StringProperty()
-    result = bpy.props.StringProperty()
+    callBack_idx = bpy.props.StringProperty()
 
 
     # message should be a json string
     # Contains a least an operator parameter to call
-    
+
     def execute(self, context):
-        #poseLib(self.action, self.data, self.jsonPose)
+        # poseLib(self.action, self.data, self.jsonPose)
+        print("Message dispatcher executed :")
         print(self.message)
-        self.result = "it's alive"
+        print(self.callBack_idx)
+
+        try:
+            msg = json.loads(self.message)
+        except:
+            print("ERROR, message is no json")
+            bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR : message no json")
+            return {'CANCELLED'}
+
+        if 'operator' not in msg:
+            print("ERROR, no operator specified in json ")
+            bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR : no operator specified in json ")
+            return {'CANCELLED'}
+        if operator_exists(msg['operator']) is False:
+            print("ERROR, Operator %s not defined" % msg['operator'])
+            bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR, Operator %s not defined" % msg['operator'])
+            return {'CANCELLED'}
+
+        ns = getattr(bpy.ops, msg['operator'].split('.')[0])
+        f = getattr(ns, msg['operator'].split('.')[1])
+
+        msg['callBack_idx'] = self.callBack_idx
+        f(**msg)
+        #bpy.ops.lfs.message_callback(idx=self.callBack_idx, message="message back !")
         return {'FINISHED'}
 
 # class LFSPoseLib(bpy.types.Operator):
@@ -182,13 +224,17 @@ class LFSMessageDispatcher(bpy.types.Operator):
 #         poseLib(self.action, self.data, self.jsonPose)
 #         return {'FINISHED'}
 
+
 def register():
     bpy.utils.register_class(LFSMessageDispatcher)
+    bpy.utils.register_class(LFSMessageCallBack)
+    bpy.utils.register_class(LFSBlenderPing)
 
 
 def unregister():
     bpy.utils.unregister_class(LFSMessageDispatcher)
-
+    bpy.utils.unregister_class(LFSMessageCallBack)
+    bpy.utils.unregister_class(LFSBlenderPing)
 
 if __name__ == "__main__":
     register()
@@ -196,3 +242,5 @@ if __name__ == "__main__":
 # bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="SNAPSHOT", data="10"})
 # bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="EXPORT_POSE", data="10")
 # bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="START_SERVER")
+
+start_server("localhost", port)

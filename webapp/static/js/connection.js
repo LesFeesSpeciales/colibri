@@ -14,12 +14,12 @@ connection.binaryType = "arraybuffer";
 
 
 
-
 connection.onopen = function () {
     // When the socket opens, log it and send two messages"
     console.log("socket opened");
     clearTimeout(connectionTimeOut);
-    
+
+
     //for (var i=0; i<50; i++)
     //{
     
