@@ -4,7 +4,7 @@ var connection = new WebSocket('ws://localhost:' + port);
 
 connectionTimeOut = setTimeout(function (){
     console.log("socket timeout");
-    $('#connection_msg').html('Connection timeout on port '+port+'.')
+    $('#connection_msg').html('<span class="alert">Connection timeout on port '+port+'.</span>')
 
  }, 2000);
 
@@ -32,14 +32,14 @@ connection.onopen = function () {
 
 connection.onclose = function (close) {
     console.log('WebSocket Closed ' + close);
-    $('#connection_msg').html('Connection closed on port '+port+'.')
+    $('#connection_msg').html('<span class="alert">Connection closed on port '+port+'.</span>')
     clearTimeout(connectionTimeOut);
 };
 
  
 connection.onerror = function (error) {
     console.log('WebSocket Error ' + error);
-    $('#connection_msg').html('Connection error on port '+port+'.')
+    $('#connection_msg').html('<span class="alert">Connection error on port '+port+'.</span>')
     clearTimeout(connectionTimeOut);
 };
 
