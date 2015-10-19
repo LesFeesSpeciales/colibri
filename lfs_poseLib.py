@@ -28,7 +28,7 @@ def export_transforms():
     return boneTransform_dict
 
 
-def import_transforms(json_data):
+def import_transforms(json_data, flipped=False):
     bpy.ops.object.mode_set(mode='POSE')
     json_data = json.loads(json_data.decode())
     print(json_data)
@@ -97,41 +97,54 @@ def captGL(outputPath):
     for v in values_temp:
         exec("%s = %s" % (v, '"%s"' % values_temp[v] if type(values_temp[v]) == str else str(values_temp[v])))
 
+class LFSColibriApplyPose(bpy.types.Operator):
+    ''''''
+
+    bl_idname = "lfs.colibri_apply_pose"
+    bl_label = "LFS : Apply pose"
+
+    jsonPose = bpy.props.StringProperty()
+    flipped = bpy.props.BoolProperty(default=False)
+
+    def execute(self, context):
+        import_transforms(base64.b64decode(self.jsonPose), self.flipped)
+        return {'FINISHED'}
 
 
-def poseLib(action=None, data=None, jsonPose=None):
-    print(action)
-    print(data)
-    print(jsonPose)
-    source_file = bpy.data.filepath
-    if action == "SNAPSHOT":
-        f = tempfile.NamedTemporaryFile(delete=False)
-        f.close()
-        path = f.name + ".png"
-        captGL(path)
-        print(path)
-        with open(path, "rb") as image_file:
-            encoded_image = base64.b64encode(image_file.read())
-        print(len(encoded_image))
-        url = 'http://%s:2048/pose/%s' % (hostname, data)
-        response = requests.post(url, params={'field': 'thumbnail', 'source_file':source_file}, files={'file':encoded_image})
-    elif action == "SELECT_BONES":
-        select_bones(base64.b64decode(jsonPose))
+
+# def poseLib(action=None, data=None, jsonPose=None):
+#     print(action)
+#     print(data)
+#     print(jsonPose)
+#     source_file = bpy.data.filepath
+#     if action == "SNAPSHOT":
+#         f = tempfile.NamedTemporaryFile(delete=False)
+#         f.close()
+#         path = f.name + ".png"
+#         captGL(path)
+#         print(path)
+#         with open(path, "rb") as image_file:
+#             encoded_image = base64.b64encode(image_file.read())
+#         print(len(encoded_image))
+#         url = 'http://%s:2048/pose/%s' % (hostname, data)
+#         response = requests.post(url, params={'field': 'thumbnail', 'source_file':source_file}, files={'file':encoded_image})
+#     elif action == "SELECT_BONES":
+#         select_bones(base64.b64decode(jsonPose))
     
-    elif action == "EXPORT_POSE":
-        p = json.dumps(export_transforms())
-        url = 'http://%s:2048/pose/%s' % (hostname,data)
-        response = requests.post(url, params={'field':'json_fromBlender', 'json':p, 'source_file':source_file})
-    elif action == "APPLY_POSE":
-        import_transforms(base64.b64decode(jsonPose))
+#     elif action == "EXPORT_POSE":
+#         p = json.dumps(export_transforms())
+#         url = 'http://%s:2048/pose/%s' % (hostname,data)
+#         response = requests.post(url, params={'field':'json_fromBlender', 'json':p, 'source_file':source_file})
+#     elif action == "APPLY_POSE":
+#         import_transforms(base64.b64decode(jsonPose))
 
 
 def register():
-    bpy.utils.register_class(LFSPoseLib)
+    bpy.utils.register_class(LFSColibriApplyPose)
 
 
 def unregister():
-    bpy.utils.unregister_class(LFSPoseLib)
+    bpy.utils.unregister_class(LFSColibriApplyPose)
 
 
 if __name__ == "__main__":

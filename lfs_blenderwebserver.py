@@ -61,11 +61,11 @@ class WebSocketApp(_WebSocket):
 
     def closed(self, code, reason=None):
         print('Connection from %s closed %i : %s'
-              % (self.peer_adress, code, reason))
+              % (self.peer_address[0], code, reason))
         sockets.remove(self)
 
     def received_message(self, message):
-        print("Incoming message from %s" % self.peer_address)
+        print("Incoming message from %s" % self.peer_address[0])
         # Queing the message (full) and the socket used
         message_queue.put((message.data.decode(message.encoding), self)) 
 
