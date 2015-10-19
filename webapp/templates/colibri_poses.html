@@ -1,0 +1,65 @@
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb#">
+<head>
+  <link rel="stylesheet" href="/static/css/colibri_poses.css" />
+  <link rel="stylesheet" href="/static/css/jquery-ui-1.11.4.min.css" />
+
+  <script src="/static/js/jquery-1.11.3.min.js"></script>
+  <script src="/static/js/jquery-ui-1.11.4.min.js"></script>
+  <script src="/static/js/colibri_poses.js"></script>
+  <script src="/static/js/connection.js"></script>
+</head>
+
+<body>
+
+    <div id="header">
+        <div id="header1" class="headerdiv">
+            <span id="connection_msg">No blender found</span>
+            
+        </div>
+        <div id="header2" class="headerdiv">Colibri</div>
+        <div id="header3" class="headerdiv"><div id="slider"></div></div>
+        
+    </div>
+
+    <div id="nav" class="resizable ui-resizable-e">
+        
+        <h3>Libraries</h3>
+            {% for l in data['libs']['_ORDER'] %}
+                <li class="{% if l == data['library'] %}active{% end %}"><a href="/poses/{{l}}">{{data['libs'][l]['path']}}</a></li>
+            {% end %}
+
+    </div>
+    <div id="properties">
+        <div class="property_thumbnail">
+            <img id="properties_thumbnail_img" class="thumbnail_img" src="/static/content/missingFrame.jpg" />
+        </div>
+        
+        <button>Apply</button>
+        <button>Apply reverse</button>
+        <button>Select affected</button>
+        <input id="properties_title" value="Title" />
+        <button>Update pose</button>
+        <button>Update thumbnail</button>
+    </div>
+
+
+    <div id="container">
+
+      {% if data['poses'] %}
+        {% for p in data['poses'] %}
+            <div class="thumbnail"
+                  style="background-image: url(/static/content/{{data['poses'][p]['pose_id']}}.png)"
+                  title="{{data['poses'][p]['title']}}"
+                  pose_id="{{ data['poses'][p]['pose_id'] }}"
+                  thumbnail="/static/content/{{data['poses'][p]['pose_id']}}.png"
+                  jsonPose="{{ data['poses'][p]['json'] }}"
+                  >&zwnj;</div>
+        {% end %}
+      {% end %}
+       
+       <div class="thumbnail">new pose</div>
+
+    </div>
+    <div id="mousetooltip">Tooltip<div>
+    
+</body>

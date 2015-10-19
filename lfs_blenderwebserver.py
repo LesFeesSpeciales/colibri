@@ -3,7 +3,7 @@ from bpy.app.handlers import persistent
 from bpy.ops import op_as_string
 import json
 import uuid
-
+import os.path
 import queue
 import threading
 
@@ -153,7 +153,7 @@ class LFSBlenderPing(bpy.types.Operator):
     callback_idx = bpy.props.StringProperty()
 
     def execute(self, context):
-        msgBack = {'operator': 'lfs.blender_ping', 'filepath': bpy.data.filepath}
+        msgBack = {'operator': 'lfs.blender_ping', 'filepath': bpy.data.filepath if bpy.data.filepath else 'no file', 'filename': os.path.basename(bpy.data.filepath) if bpy.data.filepath else 'no file'}
         bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
         return {'FINISHED'}
 

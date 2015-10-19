@@ -4,21 +4,23 @@ var connection = new WebSocket('ws://localhost:' + port);
 
 connectionTimeOut = setTimeout(function (){
     console.log("socket timeout");
-    $('#BlenderConnectionAlert').html('<div class="alert alert-danger" role="alert">Connection timeout : Impossible to connect to Blender on port '+port+'. Try reloading</div>')
+    $('#connection_msg').html('Connection timeout on port '+port+'.')
 
  }, 2000);
 
 
 connection.binaryType = "arraybuffer";
 
-
-
+//{"operator": "lfs.blender_ping", "filepath": "/Users/flavioperez/Downloads/victor.blend/testConnection.blend", "filename": "testConnection.blend"}
 
 connection.onopen = function () {
     // When the socket opens, log it and send two messages"
     console.log("socket opened");
+    $('#connection_msg').html('Connected');
     clearTimeout(connectionTimeOut);
-
+    var myO = {"operator":"lfs.blender_ping"};
+    var myOStr = JSON.stringify(myO);
+    connection.send(myOStr);
 
     //for (var i=0; i<50; i++)
     //{
@@ -30,14 +32,14 @@ connection.onopen = function () {
 
 connection.onclose = function (close) {
     console.log('WebSocket Closed ' + close);
-    $('#BlenderConnectionAlert').html('<div class="alert alert-danger" role="alert">Connection closed : Impossible to connect to Blender on port '+port+'. Try reloading</div>')
+    $('#connection_msg').html('Connection closed on port '+port+'.')
     clearTimeout(connectionTimeOut);
 };
 
  
 connection.onerror = function (error) {
     console.log('WebSocket Error ' + error);
-    $('#BlenderConnectionAlert').html('<div class="alert alert-danger" role="alert">Connection error : Impossible to connect to Blender on port '+port+'. Try reloading</div>')
+    $('#connection_msg').html('Connection error on port '+port+'.')
     clearTimeout(connectionTimeOut);
 };
 
@@ -61,7 +63,14 @@ connection.onmessage = function (e) {
     } else {
         // Print out any other message from the server
         console.log(e.data);
-        alert(e.data);
+        var obj = JSON.parse(e.data);
+        if (obj.operator == "lfs.blender_ping"){
+              $('#connection_msg').html(obj.filename);
+         }else{
+              alert(e.data);
+         }
+
+        
     }
 };
 

@@ -4,8 +4,12 @@
 $('#reloadThumbnail').click(function(){
     //alert($(this).attr('pose'));
     var pose = $(this).attr('pose');
-    connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="SNAPSHOT", data="'+ pose + '")');
-    location.reload();
+    //connection.send('bpy.ops.lfs.pose_lib("EXEC_DEFAULT", action="SNAPSHOT", data="'+ pose + '")');
+    var myO = {"operator":"lfs.colibri_snapshot", "pose_id":pose};
+    var myOStr = JSON.stringify(myO);
+    alert(myOStr)
+    connection.send(myOStr);
+    //location.reload();
 });
 
 $('#reloadPose').click(function(){
@@ -64,3 +68,4 @@ $('.saveChanges').change(function(){
     });
 
 });
+

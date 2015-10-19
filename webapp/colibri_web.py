@@ -137,97 +137,97 @@ dbVersion = 1 # db version should change only if structure changes
 ##################################
 
 
-class MainPosesHandler(tornado.web.RequestHandler):
-    def get(self, library="0"):
-        if not library:  # just /lib ->shot root
-            library = "0"
+# class MainPosesHandler_OLD(tornado.web.RequestHandler):
+#     def get(self, library="0"):
+#         if not library:  # just /lib ->shot root
+#             library = "0"
 
-        pdb = colibri_functions.poseDb()
+#         pdb = colibri_functions.poseDb()
 
-        if library.endswith("NEWPOSE"):
-            # A new pose is created then redirect to its edit
-            lib_id = int(library.split('/')[0])
-            pose_id = pdb.createPose(title="unnamed pose",
-                                     json="",
-                                     tags=[],
-                                     source_file="",
-                                     source_armature="",
-                                     lib_id=lib_id)
-            self.redirect('/pose/%i' % pose_id)
-        else:
-            # list the poses of that library
-            data = {'libs': pdb.getLibs(),
-                    'library': int(library),
-                    'tags': pdb.getTags(),
-                    'poses': None,
-                    }
-            if library and library.isdigit():
-                data['poses'] = pdb.getPoses(lib_id=int(library))
-            self.render("Accueil.html", data=data)
+#         if library.endswith("NEWPOSE"):
+#             # A new pose is created then redirect to its edit
+#             lib_id = int(library.split('/')[0])
+#             pose_id = pdb.createPose(title="unnamed pose",
+#                                      json="",
+#                                      tags=[],
+#                                      source_file="",
+#                                      source_armature="",
+#                                      lib_id=lib_id)
+#             self.redirect('/pose/%i' % pose_id)
+#         else:
+#             # list the poses of that library
+#             data = {'libs': pdb.getLibs(),
+#                     'library': int(library),
+#                     'tags': pdb.getTags(),
+#                     'poses': None,
+#                     }
+#             if library and library.isdigit():
+#                 data['poses'] = pdb.getPoses(lib_id=int(library))
+#             self.render("Accueil.html", data=data)
 
-class PosesGetPoseHandler(tornado.web.RequestHandler):
-    def get(self, pose_id):
-        pdb = colibri_functions.poseDb()
-        pose = pdb.getPoses(pose_id=int(pose_id))[int(pose_id)]
+# class PosesGetPoseHandler_OLD(tornado.web.RequestHandler):
+#     def get(self, pose_id):
+#         pdb = colibri_functions.poseDb()
+#         pose = pdb.getPoses(pose_id=int(pose_id))[int(pose_id)]
 
-        self.write(base64.b64encode(pose['json']))
+#         self.write(base64.b64encode(pose['json']))
 
-        if self.get_argument("countAsApplied", None) == 'yes':
-            print "count as applied"
-            pdb.countAsApplied(pose_id)
+#         if self.get_argument("countAsApplied", None) == 'yes':
+#             print "count as applied"
+#             pdb.countAsApplied(pose_id)
 
 
-class PosesEditHandler(tornado.web.RequestHandler):
-    def get(self, pose):
-        self.write("HelloWorld")
+# class PosesEditHandler_OLD(tornado.web.RequestHandler):
+#     def get(self, pose):
+#         self.write("HelloWorld")
 
-        pdb = colibri_functions.poseDb()
-        data = {'libs': pdb.getLibs(),
-                'library':0,
-                'tags': pdb.getTags(),
-                }
-        if pose and pose.isdigit():
-            data['pose'] = pdb.getPoses(pose_id=int(pose))[int(pose)]
-            data['library'] = data['pose']['lib_id']
-        self.render("Edit.html", data=data)
+#         pdb = colibri_functions.poseDb()
+#         data = {'libs': pdb.getLibs(),
+#                 'library':0,
+#                 'tags': pdb.getTags(),
+#                 }
+#         if pose and pose.isdigit():
+#             data['pose'] = pdb.getPoses(pose_id=int(pose))[int(pose)]
+#             data['library'] = data['pose']['lib_id']
+#         self.render("Edit.html", data=data)
 
-    def post(self, pose):
-        field = self.get_argument("field", None)
-        source_file = self.get_argument("source_file", None)
-        pose_id = int(pose)
+#     def post(self, pose):
+#         field = self.get_argument("field", None)
+#         source_file = self.get_argument("source_file", None)
+#         pose_id = int(pose)
 
-        pdb = colibri_functions.poseDb()
+#         pdb = colibri_functions.poseDb()
 
-        if field == "thumbnail":
-            print "Hello"
-            imgDecode = base64.b64decode(self.request.files['file'][0]['body'])
-            print "./static/content/%s.png" % pose
-            f = open("./static/content/%s.png" % pose, 'w')
-            f.write(imgDecode)
-            f.close()
+#         if field == "thumbnail":
+#             print "Hello"
+#             imgDecode = base64.b64decode(self.request.files['file'][0]['body'])
+#             print "./static/content/%s.png" % pose
+#             f = open("./static/content/%s.png" % pose, 'w')
+#             f.write(imgDecode)
+#             f.close()
 
-            # Update path
-            pdb.updatePose(pose_id,source_file=source_file)
-        elif field == 'json_fromBlender':
-            json = self.get_argument("json")
-            pdb.updatePose(pose_id,json=json, source_file=source_file)
-        else:
-            print "pose update :", pose, field, self.get_argument("val", None)
+#             # Update path
+#             pdb.updatePose(pose_id,source_file=source_file)
+#         elif field == 'json_fromBlender':
+#             json = self.get_argument("json")
+#             pdb.updatePose(pose_id,json=json, source_file=source_file)
+#         else:
+#             print "pose update :", pose, field, self.get_argument("val", None)
 
-            title = self.get_argument("val", None) if field == 'title' else None
-            json = self.get_argument("val", None) if field == 'json' else None
-            lib_id = self.get_argument("val", None) if field == 'lib_id' else None
+#             title = self.get_argument("val", None) if field == 'title' else None
+#             json = self.get_argument("val", None) if field == 'json' else None
+#             lib_id = self.get_argument("val", None) if field == 'lib_id' else None
             
 
-            # Db connection
+#             # Db connection
             
-            # update
-            pdb.updatePose(pose_id,
-                           title=title,
-                           json=json,
-                           lib_id=lib_id)
+#             # update
+#             pdb.updatePose(pose_id,
+#                            title=title,
+#                            json=json,
+#                            lib_id=lib_id)
 
-        self.write('OK')
+#         self.write('OK')
 
 
 # class PosesEditHandlerOld(tornado.web.RequestHandler):
@@ -290,9 +290,23 @@ class PosesEditHandler(tornado.web.RequestHandler):
 #         self.write('OK')
 
 
-##################################
-#        OTHER HANDLERS          #
-##################################
+class MainPosesHandler(tornado.web.RequestHandler):
+    def get(self, library="0"):
+        if not library:  # just /lib ->shot root
+            library = "0"
+
+        pdb = colibri_functions.poseDb()
+
+        
+        # list the poses of that library
+        data = {'libs': pdb.getLibs(),
+                'library': int(library),
+                'tags': pdb.getTags(),
+                'poses': None,
+                }
+        if library and library.isdigit():
+            data['poses'] = pdb.getPoses(lib_id=int(library))
+        self.render("colibri_poses.html", data=data)
 
 ##################################
 #        APPLICATION INIT        #
@@ -302,9 +316,10 @@ class Application(tornado.web.Application):
 
     def __init__(self):
         handlers = [
-            (r'/pose/(.*)/getposeb64/', PosesGetPoseHandler),
-            (r'/pose/(.*)', PosesEditHandler),
-            (r'/lib/(.*)', MainPosesHandler),
+            #(r'/pose/(.*)/getposeb64/', PosesGetPoseHandler),
+            #(r'/pose/(.*)', PosesEditHandler),
+            #(r'/lib/(.*)', MainPosesHandler),
+            (r'/poses/(.*)', MainPosesHandler),
 
         ]
         settings = dict(

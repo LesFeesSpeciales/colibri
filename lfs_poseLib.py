@@ -82,34 +82,34 @@ def select_bones(json_data):
             print(bone)
             bone.bone.select = True
 
-def captGL(outputPath):
-    '''Capture opengl in blender viewport and save the render'''
-    # save current render outputPath
+# def captGL(outputPath):
+#     '''Capture opengl in blender viewport and save the render'''
+#     # save current render outputPath
 
-    values = {
-            'bpy.context.scene.render.filepath': "toto", #outputPath,
-            'bpy.context.scene.render.resolution_x': 600,
-            'bpy.context.scene.render.resolution_y': 600,
-            'bpy.context.scene.render.resolution_percentage': 100,
-            'bpy.context.scene.render.image_settings.file_format': 'PNG',
-            'bpy.context.scene.render.image_settings.color_mode': 'RGBA',
-            # 'bpy.context.space_data.show_only_render': True, A definir
-        }
-    values_temp = {}
-    for v in values:
-        values_temp[v] = eval(v)
-        exec("%s = %s" % (v, '"%s"' % values[v] if type(values[v]) == str else str(values[v])))
+#     values = {
+#             'bpy.context.scene.render.filepath': "toto", #outputPath,
+#             'bpy.context.scene.render.resolution_x': 600,
+#             'bpy.context.scene.render.resolution_y': 600,
+#             'bpy.context.scene.render.resolution_percentage': 100,
+#             'bpy.context.scene.render.image_settings.file_format': 'PNG',
+#             'bpy.context.scene.render.image_settings.color_mode': 'RGBA',
+#             # 'bpy.context.space_data.show_only_render': True, A definir
+#         }
+#     values_temp = {}
+#     for v in values:
+#         values_temp[v] = eval(v)
+#         exec("%s = %s" % (v, '"%s"' % values[v] if type(values[v]) == str else str(values[v])))
 
 
-    # Update output
-    bpy.context.scene.render.filepath = outputPath
-    print("captGL outputPath :")
-    print(bpy.context.scene.render.filepath)
-    # render opengl and write the render
-    bpy.ops.render.opengl(write_still=True)
-    # restore previous output path
-    for v in values_temp:
-        exec("%s = %s" % (v, '"%s"' % values_temp[v] if type(values_temp[v]) == str else str(values_temp[v])))
+#     # Update output
+#     bpy.context.scene.render.filepath = outputPath
+#     print("captGL outputPath :")
+#     print(bpy.context.scene.render.filepath)
+#     # render opengl and write the render
+#     bpy.ops.render.opengl(write_still=True)
+#     # restore previous output path
+#     for v in values_temp:
+#         exec("%s = %s" % (v, '"%s"' % values_temp[v] if type(values_temp[v]) == str else str(values_temp[v])))
 
 class LFSColibriApplyPose(bpy.types.Operator):
     '''Get a pose a a base64 encoded json and apply it
@@ -123,6 +123,63 @@ class LFSColibriApplyPose(bpy.types.Operator):
 
     def execute(self, context):
         import_transforms(base64.b64decode(self.jsonPose), self.flipped)
+        return {'FINISHED'}
+
+class LFSColibriMakeSnatpshot(bpy.types.Operator):
+    '''Make a snapshot (openGlRender) and send it to the server'''
+
+    bl_idname = "lfs.colibri_snapshot"
+    bl_label = "LFS : Make a snapshot"
+
+    hostname = bpy.props.StringProperty(default="localhost")
+    pose_id = bpy.props.StringProperty()
+    callback_idx = bpy.props.StringProperty()
+
+    def execute(self, context):
+        # creating a temp file
+        f = tempfile.NamedTemporaryFile(delete=False)
+        f.close()
+        path = f.name + ".png"
+        
+        # Setting the render values
+        values = {
+            'bpy.context.scene.render.filepath': path,
+            'bpy.context.scene.render.resolution_x': 600,
+            'bpy.context.scene.render.resolution_y': 600,
+            'bpy.context.scene.render.resolution_percentage': 100,
+            'bpy.context.scene.render.image_settings.file_format': 'PNG',
+            'bpy.context.scene.render.image_settings.color_mode': 'RGBA',
+            # 'bpy.context.space_data.show_only_render': True, A definir
+            }
+        values_temp = {}
+        # Saving the previous values and applying the thumbnail ones
+        for v in values:
+            values_temp[v] = eval(v)
+            exec("%s = %s" % (v, '"%s"' % values[v] if type(values[v]) == str else str(values[v])))
+
+        # Update output
+        #bpy.context.scene.render.filepath = outputPath
+        print("captGL outputPath :")
+        print(bpy.context.scene.render.filepath)
+        # render opengl and write the render
+        bpy.ops.render.opengl(write_still=True)
+        # restore previous output path
+        for v in values_temp:
+            exec("%s = %s" % (v, '"%s"' % values_temp[v] if type(values_temp[v]) == str else str(values_temp[v])))
+
+        # Open the rendered image and encode it as base64
+
+        with open(path, "rb") as image_file:
+            encoded_image = base64.b64encode(image_file.read())
+        print(len(encoded_image))
+        # Sending the image to the server
+        url = 'http://%s:2048/pose/%s' % (self.hostname, self.pose_id)
+        response = requests.post(url, params={'field': 'thumbnail', 'source_file':bpy.data.filepath}, files={'file':encoded_image})
+    
+        # Callback to warn the image is uploaded
+        msgBack = {'operator': 'lfs.colibri_snapshot', 'pose_id': self.pose_id, filepath': bpy.data.filepath}
+        bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
+        
         return {'FINISHED'}
 
 
@@ -156,10 +213,12 @@ class LFSColibriApplyPose(bpy.types.Operator):
 
 def register():
     bpy.utils.register_class(LFSColibriApplyPose)
+    bpy.utils.register_class(LFSColibriMakeSnatpshot)
 
 
 def unregister():
     bpy.utils.unregister_class(LFSColibriApplyPose)
+    bpy.utils.unregister_class(LFSColibriMakeSnatpshot)
 
 
 if __name__ == "__main__":
