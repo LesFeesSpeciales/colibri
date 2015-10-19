@@ -29,6 +29,9 @@ def export_transforms():
 
 
 def import_transforms(json_data, flipped=False):
+    # ATTENTION : appeler cette fonction avec flipped=True pour appliquer sur l'autre partie du rig.
+    # ça utilise le copier-coller de poses de blender
+    # je n'ai pas implemente la communication avec l'interface web.
     bpy.ops.object.mode_set(mode='POSE')
     json_data = json.loads(json_data.decode())
     print(json_data)
@@ -37,7 +40,9 @@ def import_transforms(json_data, flipped=False):
         for rig in [r for r in bpy.data.objects if r.type == 'ARMATURE']:
             for bone in rig.pose.bones:
                 bones.append(bone)
-
+        
+    if flipped:
+        tmp_bones = {}
     for bone in bones:
         arma = bone.id_data.name
         if json_data.get(arma) and json_data.get(arma).get(bone.name): # If the armature is in json_data and the bone is in armature
@@ -48,7 +53,16 @@ def import_transforms(json_data, flipped=False):
             print(bone.name, '\n', matrix_final)
             
 #            bone.matrix_world = matrix_final
+            if flipped:
+                tmp_bones[bone.name] = bone.matrix_basis.copy()
+                bone.bone.select = True
             bone.matrix_basis = matrix_final
+
+    if flipped:
+        bpy.ops.pose.copy()
+        for bone, mat in tmp_bones.items():
+            bpy.context.object.pose.bones[bone].matrix_basis = mat
+        bpy.ops.pose.paste(flipped=True)
 ###
 
 
@@ -98,7 +112,8 @@ def captGL(outputPath):
         exec("%s = %s" % (v, '"%s"' % values_temp[v] if type(values_temp[v]) == str else str(values_temp[v])))
 
 class LFSColibriApplyPose(bpy.types.Operator):
-    ''''''
+    '''Get a pose a a base64 encoded json and apply it
+    '''
 
     bl_idname = "lfs.colibri_apply_pose"
     bl_label = "LFS : Apply pose"
