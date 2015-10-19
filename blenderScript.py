@@ -128,8 +128,8 @@ def scene_update(context):
 
     while not message_queue.empty():
         message, socket = message_queue.get()
-        callBack_idx = registerCallBack(lambda msgToSend: socket.send(msgToSend))
-        bpy.ops.lfs.message_dispatcher(message=message, callBack_idx=callBack_idx)
+        callback_idx = registerCallBack(lambda msgToSend: socket.send(msgToSend))
+        bpy.ops.lfs.message_dispatcher(message=message, callback_idx=callback_idx)
 
 
 def operator_exists(idname):
@@ -148,12 +148,11 @@ class LFSBlenderPing(bpy.types.Operator):
     bl_idname = "lfs.blender_ping"
     bl_label = "LFS : Bleder Ping"
 
-    callBack_idx = bpy.props.StringProperty()
-    operator = bpy.props.StringProperty()
+    callback_idx = bpy.props.StringProperty()
 
     def execute(self, context):
-        msgBack = {'port': port, 'operator': self.operator, 'file': bpy.data.filepath}
-        bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message=json.dumps(msgBack))
+        msgBack = {'port': port, 'operator': 'lfs.blender_ping', 'file': bpy.data.filepath}
+        bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
         return {'FINISHED'}
 
 
@@ -163,13 +162,13 @@ class LFSMessageCallBack(bpy.types.Operator):
     bl_idname = "lfs.message_callback"
     bl_label = "LFS : Message Call Back"
 
-    callBack_idx = bpy.props.StringProperty()
+    callback_idx = bpy.props.StringProperty()
     message = bpy.props.StringProperty()
 
     def execute(self, context):
-        print("Message Call Back to %s : %s" % (self.callBack_idx, self.message))
-        callBacks[self.callBack_idx](self.message)
-        del callBacks[self.callBack_idx]  # Callback can only be used once
+        print("Message Call Back to %s : %s" % (self.callback_idx, self.message))
+        callBacks[self.callback_idx](self.message)
+        del callBacks[self.callback_idx]  # Callback can only be used once
         return {'FINISHED'}
 
 
@@ -180,7 +179,7 @@ class LFSMessageDispatcher(bpy.types.Operator):
     bl_label = "LFS : Message Dispatcher"
 
     message = bpy.props.StringProperty()
-    callBack_idx = bpy.props.StringProperty()
+    callback_idx = bpy.props.StringProperty()
 
     # message should be a json string
     # Contains a least an operator parameter to call
@@ -189,41 +188,47 @@ class LFSMessageDispatcher(bpy.types.Operator):
         # poseLib(self.action, self.data, self.jsonPose)
         print("Message dispatcher executed :")
         print(self.message)
-        print(self.callBack_idx)
+        print(self.callback_idx)
 
         try:
             # msg SHOULD be a valid json string
             msg = json.loads(self.message)
         except:
             self.report({'ERROR'}, "message is no valid json")
-            bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR : message no json")
+            bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message="ERROR : message no json")
             return {'CANCELLED'}
 
         if 'operator' not in msg:
             # msg lib should have an operator key
             self.report({'ERROR'}, "Json not well formated : no operator specified in json ")
-            bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR : no operator specified in json ")
+            bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message="ERROR : no operator specified in json ")
             return {'CANCELLED'}
 
         if operator_exists(msg['operator']) is False:
             # the operator to call need to be register before
             # You cant run function not registered
             self.report({'ERROR'}, "Operator %s not defined" % msg['operator'])
-            bpy.ops.lfs.message_callback(callBack_idx=self.callBack_idx, message="ERROR, Operator %s not defined" % msg['operator'])
+            bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message="ERROR, Operator %s not defined" % msg['operator'])
             return {'CANCELLED'}
 
         # getting the function you're looking for
         ns = getattr(bpy.ops, msg['operator'].split('.')[0])
         f = getattr(ns, msg['operator'].split('.')[1])
 
-        # preparing the callback id
-        msg['callBack_idx'] = self.callBack_idx
+        # preparing the callback id if needed by the operator to call
+        if 'callback_idx' in dir(f.get_rna()):
+            msg['callback_idx'] = self.callback_idx
+            # Attention, not having a parameter callback_idx in your operator
+            # Will provide any easy callback to the socket
 
-        # calling the function, providing all the json message
-        # TOFIX : this won't work if operator as no 'operator' and 'callBack_idx' param
+        # removing 'operator' key if not used by the operator to be called
+        if 'operator' not in dir(f.get_rna()):
+            msg.pop("operator", None)
+        # all other keys sent by the app are up to you !
+
+        # calling the operator, providing the message
         f(**msg)
 
-        #  bpy.ops.lfs.message_callback(idx=self.callBack_idx, message="back!")
         return {'FINISHED'}
 
 
