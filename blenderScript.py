@@ -65,10 +65,9 @@ class WebSocketApp(_WebSocket):
         sockets.remove(self)
 
     def received_message(self, message):
-        print(self.peer_address)
-        print(message.data.decode(message.encoding))
-
-        message_queue.put((message.data.decode(message.encoding), self))  # (the_message, socket)
+        print("Incoming message from %s" % self.peer_address)
+        # Queing the message (full) and the socket used
+        message_queue.put((message.data.decode(message.encoding), self)) 
 
 
 def start_server(host, port):
@@ -124,7 +123,9 @@ def stop_server():
 
 @persistent
 def scene_update(context):
-    '''This is checking the message queue list'''
+    '''This is checking the message queue list
+    if messages are waiting, it send them to the message_dispatcher
+    after providing a callback index'''
 
     while not message_queue.empty():
         message, socket = message_queue.get()
@@ -133,7 +134,8 @@ def scene_update(context):
 
 
 def operator_exists(idname):
-    '''simple function that returns if an operator exists'''
+    '''simple function that returns if an operator exists
+    thanks people on blenderartists'''
 
     try:
         op_as_string(idname)
@@ -143,7 +145,7 @@ def operator_exists(idname):
 
 
 class LFSBlenderPing(bpy.types.Operator):
-    """Simple demo operator that returns current openned file"""
+    '''Simple demo operator that returns current openned file'''
 
     bl_idname = "lfs.blender_ping"
     bl_label = "LFS : Bleder Ping"
@@ -151,13 +153,13 @@ class LFSBlenderPing(bpy.types.Operator):
     callback_idx = bpy.props.StringProperty()
 
     def execute(self, context):
-        msgBack = {'port': port, 'operator': 'lfs.blender_ping', 'file': bpy.data.filepath}
+        msgBack = {'operator': 'lfs.blender_ping', 'filepath': bpy.data.filepath}
         bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
         return {'FINISHED'}
 
 
 class LFSMessageCallBack(bpy.types.Operator):
-    """Used to send messages back to the used socket"""
+    '''Used to send messages back to the used socket'''
 
     bl_idname = "lfs.message_callback"
     bl_label = "LFS : Message Call Back"
@@ -173,7 +175,9 @@ class LFSMessageCallBack(bpy.types.Operator):
 
 
 class LFSMessageDispatcher(bpy.types.Operator):
-    '''The main operator that get the messages and check them before exec'''
+    '''The main operator that get the messages and check them before exec
+    So far, for security reasons, you can only call registered operators,
+    customs (from plugins, or your scripts) or any original one in Blender.'''
 
     bl_idname = "lfs.message_dispatcher"
     bl_label = "LFS : Message Dispatcher"
@@ -233,7 +237,7 @@ class LFSMessageDispatcher(bpy.types.Operator):
 
 
 class LFSStartServer(bpy.types.Operator):
-    """Operator to start a server"""
+    '''Simple operator to start the server'''
 
     bl_idname = "lfs.start_server"
     bl_label = "LFS : Start Server"
@@ -247,7 +251,7 @@ class LFSStartServer(bpy.types.Operator):
 
 
 class LFSStopServer(bpy.types.Operator):
-    """Operator to stop the server"""
+    '''Simple operator to stop the server'''
 
     bl_idname = "lfs.stop_server"
     bl_label = "LFS : Stop Server"
