@@ -51,6 +51,7 @@
                   style="background-image: url(/static/content/{{data['poses'][p]['pose_id']}}.png)"
                   title="{{data['poses'][p]['title']}}"
                   pose_id="{{ data['poses'][p]['pose_id'] }}"
+                  id="pose_{{ data['poses'][p]['pose_id'] }}"
                   thumbnail="/static/content/{{data['poses'][p]['pose_id']}}.png"
                   jsonPoseB64="{{ data['poses'][p]['jsonB64'] }}"
                   jsonPose="{{ data['poses'][p]['json'] }}"
@@ -59,7 +60,7 @@
         {% end %}
       {% end %}
        
-       <div class="thumbnail new_pose" style="background-image: url(/static/content/newPose.png)">&zwnj;</div>
+       <div class="new_pose" style="background-image: url(/static/content/newPose.png)">&zwnj;</div>
 
     </div>
     <div id="mousetooltip">Tooltip<div>

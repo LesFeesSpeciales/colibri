@@ -84,7 +84,7 @@ body{
 
 }
 
-.thumbnail{
+.thumbnail, .new_pose{
     width:90px;
     height:90px;
     margin:5px;
@@ -96,15 +96,17 @@ body{
     border-color: rgba(0,0,0,0);
 }
 
-.thumbnail:hover { 
+.new_pose{
+    border-color: rgba(255,255,0,1);
+}
+
+.thumbnail:hover, .new_pose:hover { 
 
     
     border-color: rgba(255,0,0,1);
 }
 
-.new_pose{
-    border-color: rgba(255,255,0,1);
-}
+
 
 .thumbnail_img{
     width: 100%;
