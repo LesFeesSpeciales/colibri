@@ -62,7 +62,7 @@ def import_transforms(target_pose_data, initial_pose_data=None, merge_factor=Non
                 json_matrix += Matrix(initial_pose_data.get(arma).get(bone.name)) * (1.0 - merge_factor)
             #print(bone.name, ' --- ', value)
             matrix_final = Matrix(json_matrix)
-            print(bone.name, '\n', matrix_final)
+            #print(bone.name, '\n', matrix_final)
             
 #            bone.matrix_world = matrix_final
             if flipped:
@@ -139,6 +139,8 @@ class LFSColibriApplyPose(bpy.types.Operator):
     initial_pose = bpy.props.StringProperty(default="")
     merge_factor = bpy.props.IntProperty(default=-1)
 
+    callback_idx = bpy.props.StringProperty()
+
     def execute(self, context):
         if not self.initial_pose:
             import_transforms(base64.b64decode(self.jsonPose), flipped=self.flipped)
@@ -153,6 +155,8 @@ class LFSColibriApplyPose(bpy.types.Operator):
             # print("Merging poses by a factor of %i percents" % merge_factor)
             # print("Initial pose: ", initial_pose)
             # print("Target pose: ", target_pose)
+        msgBack = {'operator': 'lfs.colibri_apply_pose'}
+        bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
         return {'FINISHED'}
 
 class LFSColibriMakeSnatpshot(bpy.types.Operator):

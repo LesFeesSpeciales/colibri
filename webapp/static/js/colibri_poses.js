@@ -5,7 +5,8 @@ var slider_default_value = 100, //px
     mouse_dbclick_delay = 500, //ms
 
     source_pose = null,
-    target_pose = null; // used later 
+    target_pose = null,
+    merge_in_progress = false; // used later 
 
 // activate resize on the navbar
 $(function() {
@@ -53,6 +54,7 @@ function handleSliderChange(event, slider){
 // on thumbnail click, update the properties view
 function colibri_update_properties(selection){
     //alert(selection.attr('title'));
+    $('.thumbnail.selectedPose')
     $('#properties_title').val(selection.attr('title'));
     $('#properties_thumbnail_img').attr("src", selection.attr('thumbnail'));
 }
@@ -217,15 +219,18 @@ $( document ).ready(function() {
             
             if (source_pose){
                 // source pose has been updated ready to perform magics
-                if (merge_factor !=  previous_merge_factor){
+                if (merge_factor !=  previous_merge_factor ){
                     // if the merge factor is the same, the action should have been send already
 
                     $('#mousetooltip').html(merge_factor +"%");
-                    var myO = {"operator":"lfs.colibri_apply_pose", "jsonPose":target_pose, 'initial_pose':source_pose, 'merge_factor':merge_factor};
-                    var myOStr = JSON.stringify(myO);
-                    console.log(myO);
-                    connection.send(myOStr);
-                    previous_merge_factor = merge_factor;
+                    if (merge_in_progress == false){ 
+                        var myO = {"operator":"lfs.colibri_apply_pose", "jsonPose":target_pose, 'initial_pose':source_pose, 'merge_factor':merge_factor};
+                        var myOStr = JSON.stringify(myO);
+                        console.log(myO);
+                        connection.send(myOStr);
+                        previous_merge_factor = merge_factor;
+                        merge_in_progress = true;
+                    }
                 }
             }else{
                 // source pose is not yet updated (waiting for call back)

@@ -69,6 +69,8 @@ connection.onmessage = function (e) {
          }else if (obj.operator == "lfs.colibri_get_pose" && obj.to == 'mouse_down_event'){
             //console.log(obj.poseB64 );
             source_pose = obj.poseB64;
+         }else if (obj.operator == "lfs.colibri_apply_pose"){
+            merge_in_progress = false;
          }else{
               alert(e.data);
          }
