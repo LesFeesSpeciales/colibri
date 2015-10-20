@@ -52,7 +52,9 @@
                   title="{{data['poses'][p]['title']}}"
                   pose_id="{{ data['poses'][p]['pose_id'] }}"
                   thumbnail="/static/content/{{data['poses'][p]['pose_id']}}.png"
+                  jsonPoseB64="{{ data['poses'][p]['jsonB64'] }}"
                   jsonPose="{{ data['poses'][p]['json'] }}"
+
                   >&zwnj;</div>
         {% end %}
       {% end %}

@@ -66,6 +66,9 @@ connection.onmessage = function (e) {
         var obj = JSON.parse(e.data);
         if (obj.operator == "lfs.blender_ping"){
               $('#connection_msg').html(obj.filename);
+         }else if (obj.operator == "lfs.colibri_get_pose" && obj.to == 'mouse_down_event'){
+            //console.log(obj.poseB64 );
+            source_pose = obj.poseB64;
          }else{
               alert(e.data);
          }

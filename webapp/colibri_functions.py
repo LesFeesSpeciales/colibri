@@ -282,6 +282,7 @@ class poseDb:
                     'title': r[1],
                     'lib_id': lib_id,
                     'json': base64.b64decode(r[2]),
+                    'jsonB64': r[2],
                     'thumbnail_path': r[3],
                     'count': r[4],
                     'creation_date': r[5],

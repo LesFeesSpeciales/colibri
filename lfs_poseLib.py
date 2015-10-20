@@ -118,11 +118,26 @@ class LFSColibriApplyPose(bpy.types.Operator):
     bl_idname = "lfs.colibri_apply_pose"
     bl_label = "LFS : Apply pose"
 
+
     jsonPose = bpy.props.StringProperty()
     flipped = bpy.props.BoolProperty(default=False)
+    # for merging poses
+    initial_pose = bpy.props.StringProperty(default="")
+    merge_factor = bpy.props.IntProperty(default=-1)
 
     def execute(self, context):
-        import_transforms(base64.b64decode(self.jsonPose), self.flipped)
+        if not self.initial_pose:
+            import_transforms(base64.b64decode(self.jsonPose), self.flipped)
+        else:
+            # Merging pose
+            # DAMIEN
+            target_pose = base64.b64decode(self.jsonPose)
+            initial_pose = base64.b64decode(self.initial_pose)
+            merge_factor = self.merge_factor
+
+            print("Merging poses by a factor of %i percents" % merge_factor)
+            print("Initial pose: ", initial_pose)
+            print("Target pose: ", target_pose)
         return {'FINISHED'}
 
 class LFSColibriMakeSnatpshot(bpy.types.Operator):
@@ -177,12 +192,26 @@ class LFSColibriMakeSnatpshot(bpy.types.Operator):
         response = requests.post(url, params={'field': 'thumbnail', 'source_file':bpy.data.filepath}, files={'file':encoded_image})
     
         # Callback to warn the image is uploaded
-        msgBack = {'operator': 'lfs.colibri_snapshot', 'pose_id': self.pose_id, filepath': bpy.data.filepath}
+        msgBack = {'operator': 'lfs.colibri_snapshot', 'pose_id': self.pose_id, 'filepath': bpy.data.filepath}
         bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
         
         return {'FINISHED'}
 
+class LFSColibriGetPose(bpy.types.Operator):
+    '''Get a pose a a base64 encoded json and apply it
+    '''
 
+    bl_idname = "lfs.colibri_get_pose"
+    bl_label = "LFS : Get pose"
+
+    to = bpy.props.StringProperty(default="normal")
+    callback_idx = bpy.props.StringProperty()
+
+    def execute(self, context):
+        p = json.dumps(export_transforms())
+        msgBack = {'poseB64': base64.b64encode(p.encode('ascii')).decode(), 'operator': 'lfs.colibri_get_pose', 'to': self.to}
+        bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
+        return {'FINISHED'}
 
 # def poseLib(action=None, data=None, jsonPose=None):
 #     print(action)
@@ -214,12 +243,12 @@ class LFSColibriMakeSnatpshot(bpy.types.Operator):
 def register():
     bpy.utils.register_class(LFSColibriApplyPose)
     bpy.utils.register_class(LFSColibriMakeSnatpshot)
-
+    bpy.utils.register_class(LFSColibriGetPose)
 
 def unregister():
     bpy.utils.unregister_class(LFSColibriApplyPose)
     bpy.utils.unregister_class(LFSColibriMakeSnatpshot)
-
+    bpy.utils.unregister_class(LFSColibriGetPose)
 
 if __name__ == "__main__":
     register()
