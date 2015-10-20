@@ -34,6 +34,13 @@ def import_transforms(target_pose_data, initial_pose_data=None, merge_factor=Non
     # je n'ai pas implemente la communication avec l'interface web.
     bpy.ops.object.mode_set(mode='POSE')
     target_pose_data = json.loads(target_pose_data.decode())
+    if initial_pose_data is not None:
+        initial_pose_data = json.loads(initial_pose_data.decode())
+        merge_factor = float(merge_factor) # convert to [0,1] value
+        print("MERGE FACTOR", merge_factor)
+        merge_factor /= 100 # convert to [0,1] value
+        print("MERGE FACTOR", merge_factor)
+        print("type", type(merge_factor))
     print(target_pose_data)
     bones = bpy.context.selected_pose_bones
     if bones == [] : 
@@ -46,12 +53,13 @@ def import_transforms(target_pose_data, initial_pose_data=None, merge_factor=Non
     for bone in bones:
         arma = bone.id_data.name
         if target_pose_data.get(arma) and target_pose_data.get(arma).get(bone.name): # If the armature is in target_pose_data and the bone is in armature
-            json_matrix = target_pose_data.get(arma).get(bone.name) #Transforms dictionary
-            if initial_pose_data is not None:
-                json_matrix = target_pose_data.get(arma).get(bone.name)
-                merge_factor *=.01 # convert to [0,1] value
+            json_matrix = Matrix(target_pose_data.get(arma).get(bone.name)) #Transforms dictionary
+
+            if initial_pose_data is not None:# and bone.name in initial_pose_data.get(arma):
+                json_matrix = Matrix(target_pose_data.get(arma).get(bone.name))
+
                 json_matrix *= merge_factor
-                json_matrix += initial_pose_data.get(arma).get(bone.name) * (1.0 - merge_factor)
+                json_matrix += Matrix(initial_pose_data.get(arma).get(bone.name)) * (1.0 - merge_factor)
             #print(bone.name, ' --- ', value)
             matrix_final = Matrix(json_matrix)
             print(bone.name, '\n', matrix_final)
@@ -61,6 +69,8 @@ def import_transforms(target_pose_data, initial_pose_data=None, merge_factor=Non
                 tmp_bones[bone.name] = bone.matrix_basis.copy()
                 bone.bone.select = True
             bone.matrix_basis = matrix_final
+    
+    print("MERGE FACTOR", merge_factor)
 
     if flipped:
         bpy.ops.pose.copy()

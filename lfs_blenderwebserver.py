@@ -198,8 +198,8 @@ class LFSMessageDispatcher(bpy.types.Operator):
     def execute(self, context):
         # poseLib(self.action, self.data, self.jsonPose)
         print("Message dispatcher executed :")
-        print(self.message)
-        print(self.callback_idx)
+        # print(self.message)
+        # print(self.callback_idx)
 
         try:
             # msg SHOULD be a valid json string
