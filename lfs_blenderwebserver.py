@@ -70,17 +70,20 @@ class WebSocketApp(_WebSocket):
         message_queue.put((message.data.decode(message.encoding), self)) 
 
 
-def start_server(host, port):
+def start_server(op, host, port):
     '''Start a webserver'''
 
     global wserver, wserver_thread
     if wserver:
-        print("Server already running ?")
+        print("Server already running?")
+        op.report({'WARNING'}, "Server already running?")
         return False
 
     source_port = port
     while not wserver or source_port + port_range <= port:
         print("Starting server on port %i" % port)
+
+        op.report({'INFO'}, "Starting server on port %i" % port)
         try:
             wserver = make_server(host, port,
                                   server_class=WSGIServer,
@@ -90,9 +93,11 @@ def start_server(host, port):
             wserver.initialize_websockets_manager()
         except:
             print("Unable to start the server on port %i" % port)
+            op.report({'WARNING'}, "Unable to start the server on port %i" % port)
             port += 1
             if source_port + port_range <= port:
                 print("Tried all ports without finding one available")
+                op.report({'WARNING'}, "Tried all ports without finding one available")
                 return
 
     wserver_thread = threading.Thread(target=wserver.serve_forever)
@@ -104,7 +109,7 @@ def start_server(host, port):
     return True
 
 
-def stop_server():
+def stop_server(op):
     '''Stoping the webserver, closing the sockets, ...'''
 
     global wserver, wserver_thread
@@ -118,6 +123,8 @@ def stop_server():
 
     bpy.app.handlers.scene_update_post.remove(scene_update)
     wserver = None
+    print("Stopped server\n")
+    op.report({'INFO'}, "Stopped server")
     return True
 
 
@@ -242,11 +249,13 @@ class LFSStartServer(bpy.types.Operator):
     bl_idname = "lfs.start_server"
     bl_label = "LFS : Start Server"
 
-    port = bpy.props.IntProperty()
-    host = bpy.props.StringProperty()
+    # port = bpy.props.IntProperty()
+    # host = bpy.props.StringProperty()
 
     def execute(self, context):
-        start_server(self.host, self.port)
+        port = context.scene.lfs_port
+        host = context.scene.lfs_host
+        start_server(self, host, port)
         return {'FINISHED'}
 
 
@@ -257,16 +266,42 @@ class LFSStopServer(bpy.types.Operator):
     bl_label = "LFS : Stop Server"
 
     def execute(self, context):
-        stop_server()
+        stop_server(self)
         return {'FINISHED'}
 
+### UI
+
+class LFSServerPanel(bpy.types.Panel):
+    '''Server Panel'''
+    bl_label = "PoseLib Web Server"
+    bl_idname = "lfs.webserver_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_category = "LFS"
+
+    def draw(self, context):
+        layout = self.layout
+
+        scene = context.scene
+        col = layout.column(align=True)
+        row = col.row()
+        row.prop(scene, "lfs_host")
+        row.prop(scene, "lfs_port")
+        col.operator("lfs.start_server", text="Start server", icon='PLAY')
+        col = layout.column(align=True)
+        col.operator("lfs.stop_server", text="Stop server", icon='PAUSE')
+        
 
 def register():
+    bpy.types.Scene.lfs_host = bpy.props.StringProperty(name="Host", default="localhost", description="The host to connect the PoseLib to")
+    bpy.types.Scene.lfs_port = bpy.props.IntProperty(name="Port", default=8137, description="The port to connect the PoseLib to")
+
     bpy.utils.register_class(LFSMessageDispatcher)
     bpy.utils.register_class(LFSMessageCallBack)
     bpy.utils.register_class(LFSBlenderPing)
     bpy.utils.register_class(LFSStartServer)
     bpy.utils.register_class(LFSStopServer)
+    bpy.utils.register_class(LFSServerPanel)
 
 
 def unregister():
@@ -275,10 +310,14 @@ def unregister():
     bpy.utils.unregister_class(LFSBlenderPing)
     bpy.utils.unregister_class(LFSStartServer)
     bpy.utils.unregister_class(LFSStopServer)
+    bpy.utils.unregister_class(LFSServerPanel)
+
+    del bpy.types.Scene.lfs_host
+    del bpy.types.Scene.lfs_port
 
 if __name__ == "__main__":
     register()
 
 
-# bpy.ops.lfs.start_server("EXEC_DEFAULT", host="localhost", port=8137)
-# bpy.ops.lfs.stop_server("EXEC_DEFAULT")
+# bpy.ops.lfs.start_server(host="localhost", port=8137)
+# bpy.ops.lfs.stop_server()
