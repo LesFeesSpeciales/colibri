@@ -28,13 +28,13 @@ def export_transforms():
     return boneTransform_dict
 
 
-def import_transforms(json_data, flipped=False):
+def import_transforms(target_pose_data, initial_pose_data=None, merge_factor=None, flipped=False):
     # ATTENTION : appeler cette fonction avec flipped=True pour appliquer sur l'autre partie du rig.
     # ça utilise le copier-coller de poses de blender
     # je n'ai pas implemente la communication avec l'interface web.
     bpy.ops.object.mode_set(mode='POSE')
-    json_data = json.loads(json_data.decode())
-    print(json_data)
+    target_pose_data = json.loads(target_pose_data.decode())
+    print(target_pose_data)
     bones = bpy.context.selected_pose_bones
     if bones == [] : 
         for rig in [r for r in bpy.data.objects if r.type == 'ARMATURE']:
@@ -45,10 +45,14 @@ def import_transforms(json_data, flipped=False):
         tmp_bones = {}
     for bone in bones:
         arma = bone.id_data.name
-        if json_data.get(arma) and json_data.get(arma).get(bone.name): # If the armature is in json_data and the bone is in armature
-            json_matrix = json_data.get(arma).get(bone.name) #Transforms dictionary
+        if target_pose_data.get(arma) and target_pose_data.get(arma).get(bone.name): # If the armature is in target_pose_data and the bone is in armature
+            json_matrix = target_pose_data.get(arma).get(bone.name) #Transforms dictionary
+            if initial_pose_data is not None:
+                json_matrix = target_pose_data.get(arma).get(bone.name)
+                merge_factor *=.01 # convert to [0,1] value
+                json_matrix *= merge_factor
+                json_matrix += initial_pose_data.get(arma).get(bone.name) * (1.0 - merge_factor)
             #print(bone.name, ' --- ', value)
-            
             matrix_final = Matrix(json_matrix)
             print(bone.name, '\n', matrix_final)
             
@@ -127,17 +131,18 @@ class LFSColibriApplyPose(bpy.types.Operator):
 
     def execute(self, context):
         if not self.initial_pose:
-            import_transforms(base64.b64decode(self.jsonPose), self.flipped)
+            import_transforms(base64.b64decode(self.jsonPose), flipped=self.flipped)
         else:
             # Merging pose
             # DAMIEN
             target_pose = base64.b64decode(self.jsonPose)
             initial_pose = base64.b64decode(self.initial_pose)
             merge_factor = self.merge_factor
+            import_transforms(target_pose, initial_pose_data=initial_pose, merge_factor=merge_factor, flipped=self.flipped)
 
-            print("Merging poses by a factor of %i percents" % merge_factor)
-            print("Initial pose: ", initial_pose)
-            print("Target pose: ", target_pose)
+            # print("Merging poses by a factor of %i percents" % merge_factor)
+            # print("Initial pose: ", initial_pose)
+            # print("Target pose: ", target_pose)
         return {'FINISHED'}
 
 class LFSColibriMakeSnatpshot(bpy.types.Operator):
