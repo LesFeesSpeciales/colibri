@@ -44,19 +44,28 @@
         </div>
         
         <button id="properties_apply" disabled>Apply</button>
-        <button id="properties_apply_reverse" disabled>Apply mirrored</button>
-        <button id="properties_select_only" disabled>Select affected bones</button>
+        <button id="properties_apply_reverse" disabled>Apply mirrored</button><br/>
+        <button id="properties_select_only" disabled>Select affected bones</button><br/>
         
         <button id="properties_update_pose" disabled>Update pose</button>
-        <button id="properties_update_thumbnail" disabled>Update thumbnail</button>
+        <button id="properties_update_thumbnail" disabled>Update thumbnail</button><br/>
+        <input type="hidden" id="properties_pose_id" value="Title" disabled/>
+
 
         <div id="properties_more">
-          <span id="properties_pose_id_display"></span>
-          <input type="hidden" id="properties_pose_id" value="Title" disabled/>
-          Used <span id="properties_count"></span> times
-          Creation date : <span id="properties_creation_date"></span>
-          Update date : <span id="properties_update_date"></span>
-          Source file : <span id="properties_source_file"></span>
+
+          <table>
+          <tr><td></td><td></td></tr>
+          <tr><td>pose id</td><td><span id="properties_pose_id_display"></span></td></tr>
+          <tr><td>Used</td><td><span id="properties_count"></span> times</td></tr>
+          
+          <tr><td>Creation date :</td><td><span id="properties_creation_date"></span></td></tr>
+          <tr><td>Update date :</td><td><span id="properties_update_date"></span></td></tr>
+          <tr><td>Source file :</td><td><span id="properties_source_file"></span></td></tr>
+           
+           </table>
+           
+           
           
         </div>
         <button id="properties_more_button">+</button>
