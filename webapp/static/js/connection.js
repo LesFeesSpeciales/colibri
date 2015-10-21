@@ -65,13 +65,51 @@ connection.onmessage = function (e) {
         console.log(e.data);
         var obj = JSON.parse(e.data);
         if (obj.operator == "lfs.blender_ping"){
-              $('#connection_msg').html(obj.filename);
+            // SIMPLE BLENDER PING TO GET FILE of the connection
+              $('#connection_msg').html("connected to <strong>" + obj.filename + "<strong>");
+
          }else if (obj.operator == "lfs.colibri_get_pose" && obj.to == 'mouse_down_event'){
-            //console.log(obj.poseB64 );
+            // SIMPLET GET POSE FOR THE MOUSE_DOWN MERGE POSES
             source_pose = obj.poseB64;
+
+         }else if (obj.operator == "lfs.colibri_get_pose" && obj.to == 'update_pose'){
+            // UPDATING POSE FROM BLENDER TO DB
+            $("#properties_update_pose").html("Updating db...");
+            //alert(obj.pose_id);
+            $("#pose_" + obj.pose_id).attr("jsonPoseB64", obj.poseB64);
+            // update de la db
+            var field = 'json';
+            var val = obj.poseB64;
+            var pose_id = obj.pose_id;
+
+
+            $.post( "/pose/" + pose_id, {field: field, val:val, source_file:obj.source_file }, function( data ) {
+
+            });
+
+            colibri_update_properties($("#pose_" + obj.pose_id));
+
+            $("#properties_update_pose").html("Updated. Update again");
+
+            if ($("#pose_" + obj.pose_id).hasClass("emptyPose")){
+                $("#pose_" + obj.pose_id).removeClass("emptyPose");
+            }
+
          }else if (obj.operator == "lfs.colibri_apply_pose"){
+            // APPLY POSE CALL BACK TO AVOID APPLYING TO MANY TIMES THE POSES
             merge_in_progress = false;
+         }else if (obj.operator == "lfs.colibri_snapshot"){
+            // APPLY POSE CALL BACK TO AVOID APPLYING TO MANY TIMES THE POSES
+            
+            var pose_id = $('#properties_pose_id').val();
+            console.log("Pose #" + pose_id + " thumbnail updated");
+            var d = new Date();
+            $('#properties_thumbnail_img').attr('src', '/static/content/' + pose_id + '.png?'+d.getTime());
+            $('#pose_' + pose_id).css("background-image", "url('/static/content/" + pose_id + ".png?" +d.getTime() +"')"); 
+            $('#properties_update_thumbnail').html("Thumbnail updated");
+
          }else{
+            // UNEXEPECTED CALLBACK
               alert(e.data);
          }
 

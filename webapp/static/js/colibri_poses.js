@@ -19,16 +19,17 @@ $(function() {
 // show/hide nav bar and properties
 
 $(document).keypress(function(e) {
+    if ($(':focus').attr('id') != "properties_title"){
+        if (e.which == 110){
+            // toggle display of properties
+            $( "#properties" ).toggle();
+            document.cookie="colibri_properties_display=" + $( "#properties" ).is(":visible");
+        }else if(e.which == 116){
+            //toggle display of navbar
+            $( "#nav" ).toggle();
+            document.cookie="colibri_nav_display=" + $( "#nav" ).is(":visible");
 
-    if (e.which == 110){
-        // toggle display of properties
-        $( "#properties" ).toggle();
-        document.cookie="colibri_properties_display=" + $( "#properties" ).is(":visible");
-    }else if(e.which == 116){
-        //toggle display of navbar
-        $( "#nav" ).toggle();
-        document.cookie="colibri_nav_display=" + $( "#nav" ).is(":visible");
-
+        }
     }
 });
 
@@ -46,7 +47,7 @@ $('#slider').slider({
 // action when slider changes
 function handleSliderChange(event, slider){
 
-              $('.thumbnail').css('width', slider.value + 'px').css('height', slider.value + 'px');
+              $('.thumbnail, .new_pose').css('width', slider.value + 'px').css('height', slider.value + 'px');
               document.cookie="colibri_thumbnail_size=" + slider.value;
 
     }
@@ -54,9 +55,45 @@ function handleSliderChange(event, slider){
 // on thumbnail click, update the properties view
 function colibri_update_properties(selection){
     //alert(selection.attr('title'));
+    $('.selectedPose').removeClass('selectedPose');
+    selection.addClass('selectedPose');
+    $("#properties_update_pose").html("Update pose");
     $('.thumbnail.selectedPose')
     $('#properties_title').val(selection.attr('title'));
     $('#properties_thumbnail_img').attr("src", selection.attr('thumbnail'));
+    $('#properties_pose_id_display').html("#"+ selection.attr('pose_id'));
+    $('#properties_pose_id').val(selection.attr('pose_id'));
+
+    $('#properties_count').html(selection.attr('count'));
+    $('#properties_creation_date').html(selection.attr('creation_date'));
+    $('#properties_update_date').html(selection.attr('update_date'));
+    $('#properties_source_file').html(selection.attr('source_file'));
+
+
+    // update properties buttons
+    $('#properties_title').prop('disabled', false);
+    $('#properties_update_pose').prop('disabled', false);
+    $('#properties_update_thumbnail').prop('disabled', false);
+    //alert(selection.attr('jsonPoseB64'));
+    if (selection.attr('jsonPoseB64') == ""){
+        // invalid pose
+
+        $('#properties_apply').prop('disabled', true);
+        $('#properties_apply_reverse').prop('disabled', true);
+        $('#properties_select_only').prop('disabled', true);
+    }else{
+        
+        $('#properties_apply').prop('disabled', false);
+        $('#properties_apply_reverse').prop('disabled', false);
+        $('#properties_select_only').prop('disabled', false);
+    }
+}
+
+function colibri_apply_pose(pose_id, flipped, select_only){
+    var myO = {"operator":"lfs.colibri_apply_pose", "jsonPose":$("#pose_" + pose_id).attr('jsonPoseB64'), 'flipped':flipped, 'select_only':select_only};
+    var myOStr = JSON.stringify(myO);
+    console.log(myO);
+    connection.send(myOStr);
 }
 
 // from stackoverflow : THANKS
@@ -87,10 +124,6 @@ var QueryString = function () {
 }();
 
 
-function attach_events(){
-
-
-}
 
 // last action hero part
 $( document ).ready(function() {
@@ -104,7 +137,7 @@ $( document ).ready(function() {
         var colibri_thumbnail_size = get_cookie("colibri_thumbnail_size");
         if (colibri_thumbnail_size){
             $('#slider').slider('value', colibri_thumbnail_size);
-            $('.thumbnail').css('width', colibri_thumbnail_size + 'px').css('height', colibri_thumbnail_size + 'px');
+            $('.thumbnail, .new_pose').css('width', colibri_thumbnail_size + 'px').css('height', colibri_thumbnail_size + 'px');
         }
         // set visibility
         var colibri_nav_display = get_cookie("colibri_nav_display");
@@ -115,6 +148,8 @@ $( document ).ready(function() {
         if (colibri_properties_display == "false"){
             $( "#properties" ).hide();
         }
+
+        $("#properties_more").hide();
      
         // Variables for the mouse actions
         var DELAY = mouse_dbclick_delay,
@@ -157,10 +192,7 @@ $( document ).ready(function() {
             console.log('double-click');
             // alert('Double Click');  //perform double-click action
             // Apply pose HERE
-            var myO = {"operator":"lfs.colibri_apply_pose", "jsonPose":$(this).attr('jsonPoseB64')};
-            var myOStr = JSON.stringify(myO);
-            console.log(myO);
-            connection.send(myOStr);
+            colibri_apply_pose($(this).attr('pose_id'), false, false);
 
             clicks = 0;  //after action performed, reset counter
         }
@@ -258,11 +290,81 @@ $( document ).ready(function() {
 
     $(".new_pose")
     .on("click", function(e){
-        alert(window.location);
-        window.location.replace(".?newPose");
+        window.location.replace("./newpose");
     });
 
+    $("#properties_apply")
+    .on("click", function(e){
+        //alert('update_pose');
+        if ($(this).prop('disabled') == false){ 
+            colibri_apply_pose($("#properties_pose_id").val(), false, false);
+        }
+    });
 
+    $("#properties_apply_reverse")
+    .on("click", function(e){
+        //alert('update_pose');
+        if ($(this).prop('disabled') == false){ 
+            colibri_apply_pose($("#properties_pose_id").val(), true, false);
+        }
+    });
+    $("#properties_select_only")
+    .on("click", function(e){
+        //alert('update_pose');
+        if ($(this).prop('disabled') == false){ 
+            colibri_apply_pose($("#properties_pose_id").val(), false, true);
+        }
+    });
+
+    $("#properties_update_pose")
+    .on("click", function(e){
+        //alert('update_pose');
+        if ($(this).prop('disabled') == false){ 
+            var myO = {"operator":"lfs.colibri_get_pose", "to":'update_pose', 'pose_id':$("#properties_pose_id").val()};
+            console.log(myO);
+            var myOStr = JSON.stringify(myO);
+            connection.send(myOStr);
+            $("#properties_update_pose").html('Updating...');
+        }
+    });
+
+    $("#properties_title")
+    .on("change", function(e){
+        if ($(this).prop('disabled') == false){ 
+            var field = 'title';
+            var val = $(this).val();
+            var pose_id = $("#properties_pose_id").val();
+
+            console.log("Changing pose #" + pose_id + " title to : " + val);
+
+            $.post( "/pose/" + pose_id, {field: field, val:val }, function( data ) {
+
+            });
+        }
+        
+    });
+
+    $("#properties_update_thumbnail")
+    .on("click", function(e){
+        //alert('update_pose');
+        if ($(this).prop('disabled') == false){ 
+            var myO = {"operator":"lfs.colibri_snapshot", 'pose_id':$("#properties_pose_id").val()};
+            console.log(myO);
+            var myOStr = JSON.stringify(myO);
+            connection.send(myOStr);
+            $("#properties_update_thumbnail").html('Updating...');
+        }
+    });
+
+    $("#properties_more_button")
+    .on("click", function(e){
+        $("#properties_more").toggle();
+    });
+
+    $(".library_link")
+    .on("click", function(e){
+        window.location.href = $(this).attr('target');
+    });
 });
 
 // right middle click

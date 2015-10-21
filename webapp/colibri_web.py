@@ -289,6 +289,58 @@ dbVersion = 1 # db version should change only if structure changes
 #         savePose(jsonFile, currentPose)
 #         self.write('OK')
 
+class PosesEditHandler(tornado.web.RequestHandler):
+    def post(self, pose):
+        field = self.get_argument("field", None)
+        source_file = self.get_argument("source_file", None)
+        pose_id = int(pose)
+
+        pdb = colibri_functions.poseDb()
+
+        if field == "thumbnail":
+            imgDecode = base64.b64decode(self.request.files['file'][0]['body'])
+            print "./static/content/%s.png" % pose
+            f = open("./static/content/%s.png" % pose, 'w')
+            f.write(imgDecode)
+            f.close()
+
+            # Update path
+            pdb.updatePose(pose_id, source_file=source_file, thumbnail_path="%s.png" % pose)
+            self.write('OK')
+        # elif field == 'json_fromBlender':
+        #     json = self.get_argument("json")
+        #     pdb.updatePose(pose_id,json=json, source_file=source_file)
+        #     self.write('OK')
+        elif field in ['title', 'json', 'lib_id']:
+            print "pose update :", pose, field, self.get_argument("val", None)
+
+            title = self.get_argument("val", None) if field == 'title' else None
+            json = base64.b64decode(self.get_argument("val", None)) if field == 'json' else None
+            lib_id = self.get_argument("val", None) if field == 'lib_id' else None
+
+            # update
+            pdb.updatePose(pose_id,
+                           title=title,
+                           json=json,
+                           lib_id=lib_id,
+                           source_file=source_file)
+            self.write('OK')
+        else:
+            self.writre('EOF')
+        
+
+class NewPoseHandler(tornado.web.RequestHandler):
+    def get(self, library='0'):
+        pdb = colibri_functions.poseDb()
+        
+        lib_id = int(library.split('/')[0])
+        pose_id = pdb.createPose(title="unnamed pose",
+                                 json="",
+                                 tags=[],
+                                 source_file="",
+                                 source_armature="",
+                                 lib_id=lib_id)
+        self.redirect('/lib/%i/?selectedPose=%i' % (lib_id, pose_id))
 
 class MainPosesHandler(tornado.web.RequestHandler):
     def get(self, library="0"):
@@ -319,7 +371,10 @@ class Application(tornado.web.Application):
             #(r'/pose/(.*)/getposeb64/', PosesGetPoseHandler),
             #(r'/pose/(.*)', PosesEditHandler),
             #(r'/lib/(.*)', MainPosesHandler),
-            (r'/poses/(.*)', MainPosesHandler),
+            (r'/lib/(.*)/newpose', NewPoseHandler),
+            (r'/lib/(.*)/', MainPosesHandler),
+            (r'/lib/', MainPosesHandler),
+            (r'/pose/(.*)', PosesEditHandler),
 
         ]
         settings = dict(

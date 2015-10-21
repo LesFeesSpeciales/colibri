@@ -21,25 +21,45 @@
         
     </div>
 
-    <div id="nav" class="resizable ui-resizable-e">
+    <div id="nav">
         
         <h3>Libraries</h3>
+        <!--
             {% for l in data['libs']['_ORDER'] %}
-                <li class="{% if l == data['library'] %}active{% end %}"><a href="/poses/{{l}}">{{data['libs'][l]['path']}}</a></li>
+                <li class="{% if l == data['library'] %}active{% end %}"><a href="/lib/{{l}}/">{{data['libs'][l]['path']}}</a></li>
             {% end %}
-
+          -->
+            <table id="libraries">
+              {% for l in data['libs']['_ORDER'] %}
+                <tr>
+                  <td class="library_link {% if l == data['library'] %}active{% end %}" target="/lib/{{l}}/"> {{data['libs'][l]['path']}}  </td>
+                </tr>
+              {% end %}
+            </table>
     </div>
     <div id="properties">
+        <input id="properties_title" value="SELECT A POSE" disabled/>
         <div class="property_thumbnail">
             <img id="properties_thumbnail_img" class="thumbnail_img" src="/static/content/missingFrame.jpg" />
         </div>
         
-        <button>Apply</button>
-        <button>Apply reverse</button>
-        <button>Select affected</button>
-        <input id="properties_title" value="Title" />
-        <button>Update pose</button>
-        <button>Update thumbnail</button>
+        <button id="properties_apply" disabled>Apply</button>
+        <button id="properties_apply_reverse" disabled>Apply mirrored</button>
+        <button id="properties_select_only" disabled>Select affected bones</button>
+        
+        <button id="properties_update_pose" disabled>Update pose</button>
+        <button id="properties_update_thumbnail" disabled>Update thumbnail</button>
+
+        <div id="properties_more">
+          <span id="properties_pose_id_display"></span>
+          <input type="hidden" id="properties_pose_id" value="Title" disabled/>
+          Used <span id="properties_count"></span> times
+          Creation date : <span id="properties_creation_date"></span>
+          Update date : <span id="properties_update_date"></span>
+          Source file : <span id="properties_source_file"></span>
+          
+        </div>
+        <button id="properties_more_button">+</button>
     </div>
 
 
@@ -47,14 +67,19 @@
 
       {% if data['poses'] %}
         {% for p in data['poses'] %}
-            <div class="thumbnail"
-                  style="background-image: url(/static/content/{{data['poses'][p]['pose_id']}}.png)"
+            <div class="thumbnail {% if data['poses'][p]['jsonB64'] == '' %}emptyPose{% end %}" 
+                  style="background-image: url(/static/content/{{data['poses'][p]['thumbnail_path']}})"
                   title="{{data['poses'][p]['title']}}"
                   pose_id="{{ data['poses'][p]['pose_id'] }}"
                   id="pose_{{ data['poses'][p]['pose_id'] }}"
-                  thumbnail="/static/content/{{data['poses'][p]['pose_id']}}.png"
+                  thumbnail="/static/content/{{data['poses'][p]['thumbnail_path']}}"
                   jsonPoseB64="{{ data['poses'][p]['jsonB64'] }}"
                   jsonPose="{{ data['poses'][p]['json'] }}"
+                  lib_id="{{ data['poses'][p]['lib_id'] }}"
+                  count="{{ data['poses'][p]['count'] }}"
+                  creation_date="{{ data['poses'][p]['creation_date-h'] }}"
+                  update_date="{{ data['poses'][p]['update_date-h'] }}"
+                  source_file="{{ data['poses'][p]['source_file'] }}"
 
                   >&zwnj;</div>
         {% end %}

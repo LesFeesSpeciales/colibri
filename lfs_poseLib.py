@@ -20,7 +20,7 @@ def export_transforms():
     for bone in bone_list:
         if bone.id_data.name not in boneTransform_dict:
             boneTransform_dict[bone.id_data.name] = {}
-        print('----------------')
+        # print('----------------')
         matrix_final = bone.matrix_basis
         matrix_json = [tuple(e) for e in list(matrix_final)]
         
@@ -37,11 +37,11 @@ def import_transforms(target_pose_data, initial_pose_data=None, merge_factor=Non
     if initial_pose_data is not None:
         initial_pose_data = json.loads(initial_pose_data.decode())
         merge_factor = float(merge_factor) # convert to [0,1] value
-        print("MERGE FACTOR", merge_factor)
+        # print("MERGE FACTOR", merge_factor)
         merge_factor /= 100 # convert to [0,1] value
-        print("MERGE FACTOR", merge_factor)
-        print("type", type(merge_factor))
-    print(target_pose_data)
+        # print("MERGE FACTOR", merge_factor)
+        # print("type", type(merge_factor))
+    # print(target_pose_data)
     bones = bpy.context.selected_pose_bones
     if bones == [] : 
         for rig in [r for r in bpy.data.objects if r.type == 'ARMATURE']:
@@ -70,7 +70,7 @@ def import_transforms(target_pose_data, initial_pose_data=None, merge_factor=Non
                 bone.bone.select = True
             bone.matrix_basis = matrix_final
     
-    print("MERGE FACTOR", merge_factor)
+    # print("MERGE FACTOR", merge_factor)
 
     if flipped:
         bpy.ops.pose.copy()
@@ -96,34 +96,6 @@ def select_bones(json_data):
             print(bone)
             bone.bone.select = True
 
-# def captGL(outputPath):
-#     '''Capture opengl in blender viewport and save the render'''
-#     # save current render outputPath
-
-#     values = {
-#             'bpy.context.scene.render.filepath': "toto", #outputPath,
-#             'bpy.context.scene.render.resolution_x': 600,
-#             'bpy.context.scene.render.resolution_y': 600,
-#             'bpy.context.scene.render.resolution_percentage': 100,
-#             'bpy.context.scene.render.image_settings.file_format': 'PNG',
-#             'bpy.context.scene.render.image_settings.color_mode': 'RGBA',
-#             # 'bpy.context.space_data.show_only_render': True, A definir
-#         }
-#     values_temp = {}
-#     for v in values:
-#         values_temp[v] = eval(v)
-#         exec("%s = %s" % (v, '"%s"' % values[v] if type(values[v]) == str else str(values[v])))
-
-
-#     # Update output
-#     bpy.context.scene.render.filepath = outputPath
-#     print("captGL outputPath :")
-#     print(bpy.context.scene.render.filepath)
-#     # render opengl and write the render
-#     bpy.ops.render.opengl(write_still=True)
-#     # restore previous output path
-#     for v in values_temp:
-#         exec("%s = %s" % (v, '"%s"' % values_temp[v] if type(values_temp[v]) == str else str(values_temp[v])))
 
 class LFSColibriApplyPose(bpy.types.Operator):
     '''Get a pose a a base64 encoded json and apply it
@@ -135,6 +107,7 @@ class LFSColibriApplyPose(bpy.types.Operator):
 
     jsonPose = bpy.props.StringProperty()
     flipped = bpy.props.BoolProperty(default=False)
+    select_only = bpy.props.BoolProperty(default=False)
     # for merging poses
     initial_pose = bpy.props.StringProperty(default="")
     merge_factor = bpy.props.IntProperty(default=-1)
@@ -142,7 +115,10 @@ class LFSColibriApplyPose(bpy.types.Operator):
     callback_idx = bpy.props.StringProperty()
 
     def execute(self, context):
-        if not self.initial_pose:
+        print(self.select_only)
+        if self.select_only:
+            select_bones(base64.b64decode(self.jsonPose))
+        elif not self.initial_pose:
             import_transforms(base64.b64decode(self.jsonPose), flipped=self.flipped)
         else:
             # Merging pose
@@ -225,10 +201,15 @@ class LFSColibriGetPose(bpy.types.Operator):
 
     to = bpy.props.StringProperty(default="normal")
     callback_idx = bpy.props.StringProperty()
+    pose_id = bpy.props.StringProperty(default="")
 
     def execute(self, context):
         p = json.dumps(export_transforms())
-        msgBack = {'poseB64': base64.b64encode(p.encode('ascii')).decode(), 'operator': 'lfs.colibri_get_pose', 'to': self.to}
+        msgBack = {'poseB64': base64.b64encode(p.encode('ascii')).decode(),
+                   'operator': 'lfs.colibri_get_pose',
+                   'to': self.to,
+                   'pose_id': self.pose_id,
+                   'source_file':bpy.data.filepath}
         bpy.ops.lfs.message_callback(callback_idx=self.callback_idx, message=json.dumps(msgBack))
         return {'FINISHED'}
 

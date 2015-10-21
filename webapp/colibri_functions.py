@@ -170,13 +170,13 @@ class poseDb:
 
     # POSES
 
-    def createPose(self, title, json, tags=[], source_file="", source_armature="", lib_id=0):
+    def createPose(self, title, json, tags=[], source_file="", source_armature="", lib_id=0, thumbnail_path="missingFrame.jpg"):
         '''
         Providing the basic infos, it create a new pose in the database
         '''
-        self.c.execute("INSERT INTO poses(title, json, creation_date, update_date, source_file, source_armature) VALUES(\
-                    ?, ?, ?, ?, ?, ?)",
-                    (title, base64.b64encode(json), int(time.time()), int(time.time()), source_file, source_armature))
+        self.c.execute("INSERT INTO poses(title, json, creation_date, update_date, source_file, source_armature, thumbnail_path) VALUES(\
+                    ?, ?, ?, ?, ?, ?, ?)",
+                    (title, base64.b64encode(json), int(time.time()), int(time.time()), source_file, source_armature, thumbnail_path))
         
         self.c.execute("SELECT * FROM poses WHERE  pose_id = (SELECT MAX(pose_id)  FROM poses);")
         pose_id = self.c.fetchone()[0]
@@ -196,7 +196,7 @@ class poseDb:
         self.c.execute(cmd)
         self.conn.commit()
 
-    def updatePose(self, pose_id, title=None, json=None, tags=None, source_file=None, source_armature=None, lib_id = None):
+    def updatePose(self, pose_id, title=None, json=None, tags=None, source_file=None, source_armature=None, lib_id = None, thumbnail_path=None):
         '''
         provided a pose_id it will update all the other provided fields
         '''
@@ -217,7 +217,10 @@ class poseDb:
         if source_armature:
             updatedKeys.append("source_armature")
             updatedValues.append(source_armature)
-
+        if thumbnail_path:
+            updatedKeys.append("thumbnail_path")
+            updatedValues.append(thumbnail_path)
+            
         if updatedKeys:
             updatedKeys.append('update_date')
             updatedValues.append(int(time.time()))
